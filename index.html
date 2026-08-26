@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liên đội - Quản lý công tác Đội Online</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f4f7fb;color:#172033}
+.hidden{display:none!important}.login{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#0d47a1,#1769e0)}
+.loginbox{width:min(420px,100%);background:#fff;border-radius:18px;padding:28px;box-shadow:0 20px 60px #0003}.loginbox h1{margin:0 0 6px}.loginbox p{color:#6b7280}.loginbox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d8dee8;border-radius:9px}.loginbox button{width:100%;padding:12px;border:0;border-radius:9px;background:#1769e0;color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+.app{display:flex;min-height:100vh}.side{width:250px;background:#101827;color:white;padding:16px;position:sticky;top:0;height:100vh}.brand{font-weight:800;font-size:17px;padding:12px 8px 20px}.brand small{display:block;color:#9fb0c8;font-weight:500;margin-top:5px}.nav button{display:block;width:100%;border:0;background:none;color:#d7dfeb;text-align:left;padding:11px;border-radius:8px;margin:2px 0;cursor:pointer}.nav button.active,.nav button:hover{background:#1c2b42;color:#fff}.main{flex:1;min-width:0}.top{height:64px;background:white;border-bottom:1px solid #e5e7eb;padding:0 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}.top small{color:#6b7280}.content{padding:20px;max-width:1500px;margin:auto}.page{display:none}.page.active{display:block}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card,.section{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;box-shadow:0 2px 8px #17203308}.section{margin-top:16px}.metric{font-size:28px;font-weight:800;margin-top:6px}.muted{color:#6b7280;font-size:13px}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:13px}.toolbar h2{margin:0 auto 0 0;font-size:17px}button,.btn{padding:9px 12px;border:0;border-radius:8px;cursor:pointer;font-weight:650}.primary{background:#1769e0;color:#fff}.secondary{background:#edf3ff;color:#1557b0}.ghost{background:#f1f3f6}.danger{background:#feeceb;color:#a52620}.select,input{border:1px solid #d5dbe5;border-radius:8px;padding:9px;background:#fff}.tablewrap{overflow:auto;border:1px solid #e5e7eb;border-radius:10px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #e5e7eb;padding:8px;text-align:center;white-space:nowrap}th{background:#f7f9fc}td:first-child,th:first-child{text-align:left}.score{width:72px;text-align:center;padding:6px}.total{font-weight:800}.rank1{color:#9a6a00;font-weight:800}.rank2{color:#6b7280;font-weight:800}.rank3{color:#9b5c34;font-weight:800}.notice{background:#fff8df;border:1px solid #f0d16d;border-radius:10px;padding:11px;font-size:13px;margin-bottom:15px}.error{color:#b42318;margin-top:8px;font-size:13px}.ok{color:#137333;margin-top:8px;font-size:13px}
+@media(max-width:850px){.side{width:68px;padding:8px}.brand{font-size:0}.brand:before{content:"LĐ";font-size:18px}.brand small{display:none}.nav button{font-size:0;text-align:center}.nav button:before{content:"•";font-size:18px}.cards{grid-template-columns:repeat(2,1fr)}.top{padding:0 12px}.content{padding:12px}}
+@media(max-width:600px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+ <div class="loginbox">
+  <h1>🏫 Quản lý Công tác Đội</h1>
+  <p>Đăng nhập theo tài khoản của Tổng phụ trách hoặc từng Chi đội.</p>
+  <input id="email" type="email" placeholder="Email tài khoản">
+  <input id="password" type="password" placeholder="Mật khẩu">
+  <button onclick="login()">Đăng nhập</button>
+  <div id="loginMsg"></div>
+ </div>
+</div>
+
+<div id="app" class="app hidden">
+<aside class="side">
+ <div class="brand">LIÊN ĐỘI THCS LƯƠNG THẾ VINH<small id="sideRole"></small></div>
+ <nav class="nav">
+  <button class="active" data-page="dashboard">🏠 Tổng quan</button>
+  <button data-page="students">👨‍🎓 Học sinh</button>
+  <button data-page="competition">⭐ Thi đua tuần</button>
+  <button data-page="activities">🎯 Hoạt động Đội</button>
+  <button data-page="violations">🚨 Vi phạm</button>
+  <button data-page="awards">🏆 Khen thưởng</button>
+  <button data-page="settings">⚙️ Cài đặt</button>
+ </nav>
+</aside>
+<main class="main">
+<header class="top"><b id="pageTitle">Tổng quan</b><span><small id="userInfo"></small> <button class="ghost" onclick="logout()">Đăng xuất</button></span></header>
+<div class="content">
+
+<section id="dashboard" class="page active">
+ <div class="cards">
+  <div class="card"><div class="muted">Tổng học sinh</div><div id="mStudents" class="metric">0</div></div>
+  <div class="card"><div class="muted">Đội viên</div><div id="mMembers" class="metric">0</div></div>
+  <div class="card"><div class="muted">Chi đội</div><div class="metric">12</div></div>
+  <div class="card"><div class="muted">Tuần</div><div id="mWeek" class="metric">4</div></div>
+ </div>
+ <div class="section"><div class="toolbar"><h2>🏆 Xếp hạng thi đua</h2><select id="dashWeek" class="select"></select></div><div class="tablewrap"><table id="dashRank"></table></div></div>
+</section>
+
+<section id="students" class="page">
+ <div class="section"><div class="toolbar"><h2>👨‍🎓 Học sinh</h2><input id="studentSearch" placeholder="Tìm học sinh..."><select id="classFilter" class="select"></select><button class="primary" onclick="addStudent()">+ Thêm</button></div>
+ <div class="notice" id="studentNotice"></div><div class="tablewrap"><table id="studentsTable"></table></div></div>
+</section>
+
+<section id="competition" class="page">
+ <div class="section">
+  <div class="toolbar"><h2>⭐ THI ĐUA TUẦN</h2><select id="weekSelect" class="select"></select><button class="primary" onclick="saveCompetition()">💾 Lưu điểm</button></div>
+  <div id="classNotice" class="notice"></div>
+  <h3>1. ĐIỂM NỀ NẾP</h3><div class="tablewrap"><table id="disciplineTable"></table></div>
+  <h3>2. ĐIỂM HỌC TẬP</h3><div class="tablewrap"><table id="studyTable"></table></div>
+  <h3>3. XẾP LOẠI</h3><div class="tablewrap"><table id="rankTable"></table></div>
+ </div>
+</section>
+
+<section id="activities" class="page"><div class="section"><div class="toolbar"><h2>🎯 Hoạt động Đội</h2></div><div class="tablewrap"><table id="activitiesTable"></table></div></div></section>
+<section id="violations" class="page"><div class="section"><div class="toolbar"><h2>🚨 Vi phạm</h2><button class="primary" onclick="addViolation()">+ Ghi nhận</button></div><div class="tablewrap"><table id="violationsTable"></table></div></div></section>
+<section id="awards" class="page"><div class="section"><div class="toolbar"><h2>🏆 Khen thưởng</h2></div><div class="tablewrap"><table id="awardsTable"></table></div></div></section>
+
+<section id="settings" class="page"><div class="section">
+ <h2>⚙️ Cài đặt</h2><div class="notice">Chỉ <b>Tổng phụ trách</b> được thay đổi tên trường và hệ số điểm.</div>
+ <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+  <label>Tên trường<input id="schoolName" style="width:100%"></label>
+  <label>Tuần hiện tại<input id="currentWeek" type="number" min="1" max="52" style="width:100%"></label>
+  <label>T (+)<input id="pt" type="number" style="width:100%"></label>
+  <label>K (+)<input id="pk" type="number" style="width:100%"></label>
+  <label>TB<input id="ptb" type="number" style="width:100%"></label>
+  <label>Y<input id="py" type="number" style="width:100%"></label>
+ </div>
+ <button class="primary" style="margin-top:14px" onclick="saveSettings()">Lưu cài đặt</button><span id="settingsMsg"></span>
+</div></section>
+
+</div></main></div>
+
+<script>
+const CLASSES=["6A7","6A8","6A9","7A7","7A8","7A9","8A6","8A7","8A8","9A8","9A9","9A10"];
+const CRITERIA=[["Chuyên cần","chuyen_can"],["Nề nếp","ne_nep"],["Văn nghệ đầu tuần","van_nghe"],["Xe đạp","xe_dap"],["Vệ sinh","ve_sinh"],["Bồn hoa","bon_hoa"],["Tác phong","tac_phong"]];
+let sb, me=null, profile=null, settings=null;
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function isAdmin(){return profile?.role==="admin"}
+function allowedClasses(){return isAdmin()?CLASSES:[profile.class_name]}
+async function login(){
+ if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT")){$("loginMsg").innerHTML='<div class="error">Bạn chưa cấu hình Supabase trong file config.js.</div>';return}
+ const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+ $("loginMsg").innerHTML=error?`<div class="error">${esc(error.message)}</div>`:"";
+}
+async function logout(){await sb.auth.signOut()}
+async function loadProfile(){
+ const {data:{user}}=await sb.auth.getUser(); if(!user)return;
+ me=user; const {data,error}=await sb.from("profiles").select("*").eq("id",user.id).single();
+ if(error){$("loginMsg").innerHTML='<div class="error">Tài khoản chưa được gán hồ sơ. Hãy tạo dòng profile cho tài khoản trong Supabase.</div>';return}
+ profile=data; await loadSettings(); showApp(); await refreshAll();
+}
+async function loadSettings(){const {data}=await sb.from("app_settings").select("*").eq("id",true).single();settings=data||{school_name:"LIÊN ĐỘI THCS LƯƠNG THẾ VINH",current_week:4,pt:10,pk:5,ptb:-15,py:-30}}
+function showApp(){
+ $("login").classList.add("hidden");$("app").classList.remove("hidden");
+ $("sideRole").textContent=isAdmin()?"Tổng phụ trách":"Tài khoản Chi đội "+profile.class_name;
+ $("userInfo").textContent=(profile.display_name||me.email)+" · "+(profile.class_name||"Toàn trường");
+ if(!isAdmin()){$("settings").classList.add("hidden")}
+}
+function weeks(sel){sel.innerHTML="";for(let i=1;i<=52;i++){let o=document.createElement("option");o.value=i;o.textContent="Tuần "+i;sel.appendChild(o)}sel.value=settings.current_week}
+async function getScores(){
+ const {data,error}=await sb.from("competition_scores").select("*");if(error){alert(error.message);return []}return data||[]
+}
+function calc(x){let nd=CRITERIA.reduce((a,[,k])=>a+Number(x[k]||0),0);let ht=Number(x.t||0)*settings.pt+Number(x.k||0)*settings.pk+Number(x.tb||0)*settings.ptb+Number(x.y||0)*settings.py;return {nd,ht,total:nd+ht}}
+function rankFor(scores,w){
+ let arr=CLASSES.map(c=>{let x=scores.find(s=>s.week==w&&s.class_name===c)||{class_name:c};return {c,...calc(x)}});return arr.sort((a,b)=>b.total-a.total).map((x,i)=>({...x,rank:i+1}))
+}
+async function renderCompetition(){
+ const w=Number($("weekSelect").value), scores=await getScores();
+ const classes=allowedClasses();
+ const by=c=>scores.find(s=>s.week==w&&s.class_name===c)||{class_name:c,week:w};
+ let h="<thead><tr><th>Tiêu chí</th>"+classes.map(c=>`<th>${c}</th>`).join("")+"</tr></thead><tbody>";
+ CRITERIA.forEach(([name,k])=>h+=`<tr><td>${name}</td>`+classes.map(c=>`<td><input class="score" type="number" data-class="${c}" data-field="${k}" value="${Number(by(c)[k]||0)}"></td>`).join("")+"</tr>");
+ h+=`<tr><td><b>Tổng nề nếp</b></td>`+classes.map(c=>`<td class="total">${calc(by(c)).nd}</td>`).join("")+"</tr></tbody>";$("disciplineTable").innerHTML=h;
+ let s="<thead><tr><th>Kết quả</th>"+classes.map(c=>`<th>${c}</th>`).join("")+"</tr></thead><tbody>";
+ [["T","T (+"+settings.pt+")"],["K","K (+"+settings.pk+")"],["TB","TB ("+settings.ptb+")"],["Y","Y ("+settings.py+")"]].forEach(([k,l])=>s+=`<tr><td>${l}</td>`+classes.map(c=>`<td><input class="score study" type="number" min="0" data-class="${c}" data-field="${k.toLowerCase()}" value="${Number(by(c)[k.toLowerCase()]||0)}"></td>`).join("")+"</tr>`);
+ s+=`<tr><td><b>Tổng học tập</b></td>`+classes.map(c=>`<td class="total">${calc(by(c)).ht}</td>`).join("")+"</tr></tbody>";$("studyTable").innerHTML=s;
+ let r=rankFor(scores,w);$("rankTable").innerHTML="<thead><tr><th>STT</th><th>Chi đội</th><th>Học tập</th><th>Nề nếp</th><th>Tổng</th><th>Vị thứ</th></tr></thead><tbody>"+r.map(x=>`<tr><td>${x.rank}</td><td><b>${x.c}</b></td><td>${x.ht}</td><td>${x.nd}</td><td class="total">${x.total}</td><td class="${x.rank<=3?'rank'+x.rank:''}">${x.rank<=3?['','🥇','🥈','🥉'][x.rank]+' ':''}${x.rank}</td></tr>`).join("")+"</tbody>";
+ $("classNotice").innerHTML=isAdmin()?"Bạn đang ở chế độ Tổng phụ trách: có thể xem và nhập/sửa cả 12 chi đội.":"Bạn đang đăng nhập <b>"+profile.class_name+"</b>: chỉ có thể nhập/sửa điểm của lớp này. Các lớp khác chỉ hiện ở bảng xếp hạng.";
+}
+async function saveCompetition(){
+ const w=Number($("weekSelect").value), scores=await getScores(), classes=allowedClasses();
+ for(const c of classes){
+  let row=scores.find(s=>s.week==w&&s.class_name===c)||{week:w,class_name:c};
+  document.querySelectorAll(`[data-class="${c}"]`).forEach(i=>row[i.dataset.field]=Number(i.value||0));
+  row.updated_at=new Date().toISOString();
+  const {error}=await sb.from("competition_scores").upsert(row,{onConflict:"week,class_name"});
+  if(error){alert("Không lưu được "+c+": "+error.message);return}
+ }
+ alert("Đã lưu điểm Tuần "+w);await refreshAll();
+}
+async function renderDashboard(){
+ let scores=await getScores(),w=Number($("dashWeek").value),r=rankFor(scores,w);
+ const {data:students}=await sb.from("students").select("id,la_doi_vien");
+ $("mStudents").textContent=students?.length||0;$("mMembers").textContent=students?.filter(x=>x.la_doi_vien).length||0;$("mWeek").textContent=w;
+ $("dashRank").innerHTML="<thead><tr><th>Hạng</th><th>Chi đội</th><th>Học tập</th><th>Nề nếp</th><th>Tổng</th></tr></thead><tbody>"+r.map(x=>`<tr><td>${x.rank<=3?['','🥇','🥈','🥉'][x.rank]:x.rank}</td><td><b>${x.c}</b></td><td>${x.ht}</td><td>${x.nd}</td><td class="total">${x.total}</td></tr>`).join("")+"</tbody>";
+}
+async function renderStudents(){
+ let q=($("studentSearch").value||"").toLowerCase(),f=$("classFilter").value||"",query=sb.from("students").select("*").order("lop").order("ho_ten");
+ if(!isAdmin())query=query.eq("lop",profile.class_name);else if(f)query=query.eq("lop",f);
+ const {data,error}=await query;if(error){alert(error.message);return}
+ let a=(data||[]).filter(s=>!q||(`${s.ho_ten} ${s.ma_hs||""}`).toLowerCase().includes(q));
+ $("studentsTable").innerHTML="<thead><tr><th>STT</th><th>Mã HS</th><th>Họ tên</th><th>Lớp</th><th>Giới tính</th><th>Ngày sinh</th><th>Đội viên</th><th>Chức vụ</th></tr></thead><tbody>"+a.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.ma_hs)}</td><td>${esc(s.ho_ten)}</td><td>${s.lop}</td><td>${esc(s.gioi_tinh)}</td><td>${esc(s.ngay_sinh)}</td><td>${s.la_doi_vien?"✓":"-"}</td><td>${esc(s.chuc_vu)}</td></tr>`).join("")+"</tbody>";
+ $("studentNotice").textContent=isAdmin()?"Tổng phụ trách xem toàn bộ học sinh.":"Tài khoản này chỉ xem/quản lý học sinh của "+profile.class_name;
+}
+async function addStudent(){
+ if(isAdmin()){alert("Bản này ưu tiên nhập học sinh theo từng chi đội. Có thể bổ sung màn hình nhập Excel ở bản tiếp theo.");return}
+ let name=prompt("Họ và tên:");if(!name)return;let ma=prompt("Mã học sinh:","");let gt=prompt("Giới tính:","");let ns=prompt("Ngày sinh:","");let dv=confirm("Là đội viên?");let cv=prompt("Chức vụ:","");
+ const {error}=await sb.from("students").insert({ma_hs:ma,ho_ten:name,lop:profile.class_name,gioi_tinh:gt,ngay_sinh:ns,la_doi_vien:dv,chuc_vu:cv});
+ if(error)alert(error.message);else refreshAll();
+}
+async function renderOther(){
+ let {data:a}=await sb.from("activities").select("*").order("ngay",{ascending:false});$("activitiesTable").innerHTML="<thead><tr><th>Ngày</th><th>Hoạt động</th><th>Đối tượng</th><th>Ghi chú</th></tr></thead><tbody>"+(a||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ten_hoat_dong)}</td><td>${esc(x.doi_tuong)}</td><td>${esc(x.ghi_chu)}</td></tr>`).join("")+"</tbody>";
+ let {data:v}=await sb.from("violations").select("*").order("ngay",{ascending:false});$("violationsTable").innerHTML="<thead><tr><th>Ngày</th><th>Họ tên</th><th>Lớp</th><th>Nội dung</th><th>Điểm</th></tr></thead><tbody>"+(v||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ho_ten)}</td><td>${x.lop}</td><td>${esc(x.noi_dung)}</td><td>${x.diem}</td></tr>`).join("")+"</tbody>";
+ let {data:r}=await sb.from("awards").select("*").order("ngay",{ascending:false});$("awardsTable").innerHTML="<thead><tr><th>Ngày</th><th>Đối tượng</th><th>Lớp</th><th>Thành tích</th></tr></thead><tbody>"+(r||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.doi_tuong)}</td><td>${x.lop||""}</td><td>${esc(x.thanh_tich)}</td></tr>`).join("")+"</tbody>";
+}
+async function addViolation(){if(!isAdmin()&&!profile.class_name){return}let name=prompt("Họ tên:");if(!name)return;let reason=prompt("Nội dung:");let point=Number(prompt("Điểm cộng/trừ:","-2"));let cls=isAdmin()?prompt("Lớp:",CLASSES[0]):profile.class_name;let {error}=await sb.from("violations").insert({ho_ten:name,lop:cls,noi_dung:reason,diem:point});if(error)alert(error.message);else renderOther()}
+async function saveSettings(){if(!isAdmin()){alert("Chỉ Tổng phụ trách được thay đổi.");return}let payload={id:true,school_name:$("schoolName").value,current_week:Number($("currentWeek").value),pt:Number($("pt").value),pk:Number($("pk").value),ptb:Number($("ptb").value),py:Number($("py").value),updated_at:new Date().toISOString()};let {error}=await sb.from("app_settings").upsert(payload);if(error){$("settingsMsg").innerHTML='<span class="error"> '+esc(error.message)+'</span>';return}settings=payload;$("settingsMsg").innerHTML='<span class="ok"> ✓ Đã lưu.</span>';await refreshAll()}
+function fillSettings(){$("schoolName").value=settings.school_name;$("currentWeek").value=settings.current_week;$("pt").value=settings.pt;$("pk").value=settings.pk;$("ptb").value=settings.ptb;$("py").value=settings.py}
+async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther()}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");$("pageTitle").textContent=b.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,"").trim()});
+$("weekSelect").onchange=renderCompetition;$("dashWeek").onchange=renderDashboard;$("studentSearch").oninput=renderStudents;$("classFilter").onchange=renderStudents;
+(async()=>{if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT"))return;sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const {data:{session}}=await sb.auth.getSession();if(session)await loadProfile();sb.auth.onAuthStateChange(async(_,s)=>{if(s)await loadProfile();else{$("app").classList.add("hidden");$("login").classList.remove("hidden")}})})();
+</script>
+</body></html>
