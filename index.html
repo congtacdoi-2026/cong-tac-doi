@@ -157,7 +157,7 @@ async function renderStudents(){
  let q=($("studentSearch").value||"").toLowerCase(),f=$("classFilter").value||"",query=sb.from("students").select("*").order("lop").order("ho_ten");
  if(!isAdmin())query=query.eq("lop",profile.class_name);else if(f)query=query.eq("lop",f);
  const {data,error}=await query;if(error){alert(error.message);return}
- let a=(data||[]).filter(s=>!q||(`${s.ho_ten} ${s.ma_hs||""}`).toLowerCase().includes(q));
+ let a=(data||[]).filter(function(s){return !q || (String(s.ho_ten||"")+" "+String(s.ma_hs||"")).toLowerCase().includes(q);});
  $("studentsTable").innerHTML="<thead><tr><th>STT</th><th>Mã HS</th><th>Họ tên</th><th>Lớp</th><th>Giới tính</th><th>Ngày sinh</th><th>Đội viên</th><th>Chức vụ</th></tr></thead><tbody>"+a.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.ma_hs)}</td><td>${esc(s.ho_ten)}</td><td>${s.lop}</td><td>${esc(s.gioi_tinh)}</td><td>${esc(s.ngay_sinh)}</td><td>${s.la_doi_vien?"✓":"-"}</td><td>${esc(s.chuc_vu)}</td></tr>`).join("")+"</tbody>";
  $("studentNotice").textContent=isAdmin()?"Tổng phụ trách xem toàn bộ học sinh.":"Tài khoản này chỉ xem/quản lý học sinh của "+profile.class_name;
 }
