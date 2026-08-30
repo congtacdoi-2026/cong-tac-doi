@@ -306,7 +306,14 @@ async function renderOther(){
  let {data:r}=await sb.from("awards").select("*").order("ngay",{ascending:false});$("awardsTable").innerHTML="<thead><tr><th>Ngày</th><th>Đối tượng</th><th>Lớp</th><th>Thành tích</th></tr></thead><tbody>"+(r||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.doi_tuong)}</td><td>${x.lop||""}</td><td>${esc(x.thanh_tich)}</td></tr>`).join("")+"</tbody>";
 }
 async function addViolation(){if(!isAdmin()&&!profile.class_name){return}let name=prompt("Họ tên:");if(!name)return;let reason=prompt("Nội dung:");let point=Number(prompt("Điểm cộng/trừ:","-2"));let cls=isAdmin()?prompt("Lớp:",CLASSES[0]):profile.class_name;let {error}=await sb.from("violations").insert({ho_ten:name,lop:cls,noi_dung:reason,diem:point});if(error)alert(error.message);else renderOther()}
-async function saveSettings(){if(!isAdmin()){alert("Chỉ Tổng phụ trách được thay đổi.");return}let payload={id:true,school_name:$("schoolName").value,current_week:Number($("currentWeek").value),pt:Number($("pt").value),pk:Number($("pk").value),ptb:Number($("ptb").value),py:Number($("py").value),updated_at:new Date().toISOString()};let {error}=await sb.from("app_settings").upsert(payload);if(error){$("settingsMsg").innerHTML='<span class="error"> '+esc(error.message)+'</span>';return}settings=payload;$("settingsMsg").innerHTML='<span class="ok"> ✓ Đã lưu.</span>';await refreshAll()}
+async function saveSettings(){if(!isAdmin()){alert("Chỉ Tổng phụ trách được thay đổi.");return}let payload={id:true,school_name:$("schoolName").value,current_week:Number($("currentWeek").value),pt:Number($("pt").value),pk:Number($("pk").value),ptb:Number($("ptb").value),py:Number($("py").value),updated_at:new Date().toISOString()};let {error}=await sb.from("app_settings").upsert(payload);if(error){$("settingsMsg").innerHTML='<span class="error"> '+esc(error.message)+'</span>';return}settings=payload;
+
+$("schoolNameDisplay").textContent = settings.school_name;
+
+$("settingsMsg").innerHTML =
+  '<span class="ok"> ✓ Đã lưu.</span>';
+
+await refreshAll();}
 function fillSettings(){$("schoolName").value=settings.school_name;$("currentWeek").value=settings.current_week;$("pt").value=settings.pt;$("pk").value=settings.pk;$("ptb").value=settings.ptb;$("py").value=settings.py}
 async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther()}
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");$("pageTitle").textContent=b.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,"").trim()});
