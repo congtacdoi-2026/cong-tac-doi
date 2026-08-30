@@ -162,10 +162,52 @@ async function renderStudents(){
  $("studentNotice").textContent=isAdmin()?"Tổng phụ trách xem toàn bộ học sinh.":"Tài khoản này chỉ xem/quản lý học sinh của "+profile.class_name;
 }
 async function addStudent(){
- if(isAdmin()){alert("Bản này ưu tiên nhập học sinh theo từng chi đội. Có thể bổ sung màn hình nhập Excel ở bản tiếp theo.");return}
- let name=prompt("Họ và tên:");if(!name)return;let ma=prompt("Mã học sinh:","");let gt=prompt("Giới tính:","");let ns=prompt("Ngày sinh:","");let dv=confirm("Là đội viên?");let cv=prompt("Chức vụ:","");
- const {error}=await sb.from("students").insert({ma_hs:ma,ho_ten:name,lop:profile.class_name,gioi_tinh:gt,ngay_sinh:ns,la_doi_vien:dv,chuc_vu:cv});
- if(error)alert(error.message);else refreshAll();
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách mới có thể thêm học sinh.");
+    return;
+  }
+
+  let name=prompt("Họ và tên học sinh:");
+  if(!name || !name.trim()) return;
+
+  let ma=prompt("Mã học sinh:","");
+
+  let lop=prompt(
+    "Nhập lớp:\n\n6A7, 6A8, 6A9\n7A7, 7A8, 7A9\n8A6, 8A7, 8A8\n9A8, 9A9, 9A10",
+    "6A7"
+  );
+
+  if(!lop) return;
+
+  lop=lop.trim().toUpperCase();
+
+  if(!CLASSES.includes(lop)){
+    alert("Lớp không hợp lệ. Vui lòng nhập đúng tên lớp.");
+    return;
+  }
+
+  let gt=prompt("Giới tính:","");
+  let ns=prompt("Ngày sinh:","");
+  let dv=confirm("Học sinh này là ĐỘI VIÊN?\n\nOK = Có\nCancel = Không");
+  let cv=prompt("Chức vụ trong Đội (nếu có):","");
+
+  const {error}=await sb.from("students").insert({
+    ma_hs:ma,
+    ho_ten:name.trim(),
+    lop:lop,
+    gioi_tinh:gt,
+    ngay_sinh:ns,
+    la_doi_vien:dv,
+    chuc_vu:cv
+  });
+
+  if(error){
+    alert("Không lưu được học sinh:\n"+error.message);
+    return;
+  }
+
+  alert("✅ Đã thêm học sinh "+name.trim()+" vào lớp "+lop);
+  await refreshAll();
 }
 async function renderOther(){
  let {data:a}=await sb.from("activities").select("*").order("ngay",{ascending:false});$("activitiesTable").innerHTML="<thead><tr><th>Ngày</th><th>Hoạt động</th><th>Đối tượng</th><th>Ghi chú</th></tr></thead><tbody>"+(a||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ten_hoat_dong)}</td><td>${esc(x.doi_tuong)}</td><td>${esc(x.ghi_chu)}</td></tr>`).join("")+"</tbody>";
