@@ -29,7 +29,7 @@
 
 <div id="app" class="app hidden">
 <aside class="side">
- <div class="brand">LIÊN ĐỘI THCS LƯƠNG THẾ VINH<small id="sideRole"></small></div>
+ <div class="brand"><span id="schoolNameDisplay">LIÊN ĐỘI THCS LƯƠNG THẾ VINH</span><small id="sideRole"></small></div>
  <nav class="nav">
   <button class="active" data-page="dashboard">🏠 Tổng quan</button>
   <button data-page="students">👨‍🎓 Học sinh</button>
@@ -116,10 +116,21 @@ async function loadProfile(){
 }
 async function loadSettings(){const {data}=await sb.from("app_settings").select("*").eq("id",true).single();settings=data||{school_name:"LIÊN ĐỘI THCS LƯƠNG THẾ VINH",current_week:4,pt:10,pk:5,ptb:-15,py:-30}}
 function showApp(){
- $("login").classList.add("hidden");$("app").classList.remove("hidden");
- $("sideRole").textContent=isAdmin()?"Tổng phụ trách":"Tài khoản Chi đội "+profile.class_name;
- $("userInfo").textContent=(profile.display_name||me.email)+" · "+(profile.class_name||"Toàn trường");
- if(!isAdmin()){$("settings").classList.add("hidden")}
+ $("login").classList.add("hidden");
+ $("app").classList.remove("hidden");
+
+ $("schoolNameDisplay").textContent =
+   settings?.school_name || "LIÊN ĐỘI THCS LƯƠNG THẾ VINH";
+
+ $("sideRole").textContent =
+   isAdmin() ? "Tổng phụ trách" : "Tài khoản Chi đội " + profile.class_name;
+
+ $("userInfo").textContent =
+   (profile.display_name || me.email) + " · " + (profile.class_name || "Toàn trường");
+
+ if(!isAdmin()){
+   $("settings").classList.add("hidden");
+ }
 }
 function weeks(sel){sel.innerHTML="";for(let i=1;i<=52;i++){let o=document.createElement("option");o.value=i;o.textContent="Tuần "+i;sel.appendChild(o)}sel.value=settings.current_week}
 async function getScores(){
