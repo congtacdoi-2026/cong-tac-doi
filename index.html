@@ -215,6 +215,80 @@ async function addStudent(){
   alert("✅ Đã thêm học sinh "+name.trim()+" vào lớp "+lop);
   await refreshAll();
 }
+ async function importExcel(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách mới được nhập danh sách học sinh.");
+    event.target.value = "";
+    return;
+  }
+
+  try{
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, {type:"array"});
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+
+    if(!rows.length){
+      alert("File Excel không có dữ liệu.");
+      return;
+    }
+
+    const students = rows.map((r,index)=>({
+      ma_hs: String(r["Mã HS"]||"").trim(),
+      ho_ten: String(r["Họ tên"]||"").trim(),
+      lop: String(r["Lớp"]||"").trim(),
+      gioi_tinh: String(r["Giới tính"]||"").trim(),
+      ngay_sinh: String(r["Ngày sinh"]||"").trim(),
+      la_doi_vien:
+        String(r["Đội viên"]||"").trim().toLowerCase()==="có" ||
+        String(r["Đội viên"]||"").trim().toLowerCase()==="yes",
+      chuc_vu: String(r["Chức vụ"]||"").trim()
+    })).filter(s=>s.ho_ten && s.lop);
+
+    if(!students.length){
+      alert("Không tìm thấy dữ liệu hợp lệ. Hãy kiểm tra tên các cột Excel.");
+      return;
+    }
+
+    const invalid = students.filter(s=>!CLASSES.includes(s.lop));
+
+    if(invalid.length){
+      alert(
+        "Có lớp không nằm trong danh sách 12 chi đội:\n\n"+
+        [...new Set(invalid.map(s=>s.lop))].join(", ")+
+        "\n\nHãy kiểm tra lại cột Lớp trong Excel."
+      );
+      return;
+    }
+
+    const ok = confirm(
+      "Tìm thấy "+students.length+" học sinh.\n\n"+
+      "Bạn có muốn nhập vào hệ thống không?"
+    );
+
+    if(!ok) return;
+
+    const {error} = await sb.from("students").insert(students);
+
+    if(error){
+      alert("Không nhập được danh sách:\n"+error.message);
+      return;
+    }
+
+    alert("✅ Đã nhập thành công "+students.length+" học sinh.");
+
+    event.target.value = "";
+    await refreshAll();
+
+  }catch(error){
+    console.error(error);
+    alert("Không đọc được file Excel:\n"+error.message);
+    event.target.value = "";
+  }
+}
 async function renderOther(){
  let {data:a}=await sb.from("activities").select("*").order("ngay",{ascending:false});$("activitiesTable").innerHTML="<thead><tr><th>Ngày</th><th>Hoạt động</th><th>Đối tượng</th><th>Ghi chú</th></tr></thead><tbody>"+(a||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ten_hoat_dong)}</td><td>${esc(x.doi_tuong)}</td><td>${esc(x.ghi_chu)}</td></tr>`).join("")+"</tbody>";
  let {data:v}=await sb.from("violations").select("*").order("ngay",{ascending:false});$("violationsTable").innerHTML="<thead><tr><th>Ngày</th><th>Họ tên</th><th>Lớp</th><th>Nội dung</th><th>Điểm</th></tr></thead><tbody>"+(v||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ho_ten)}</td><td>${x.lop}</td><td>${esc(x.noi_dung)}</td><td>${x.diem}</td></tr>`).join("")+"</tbody>";
