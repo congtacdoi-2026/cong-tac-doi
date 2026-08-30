@@ -55,7 +55,12 @@
 </section>
 
 <section id="students" class="page">
- <div class="section"><div class="toolbar"><h2>👨‍🎓 Học sinh</h2><input id="studentSearch" placeholder="Tìm học sinh..."><select id="classFilter" class="select"></select><button class="primary" onclick="addStudent()">+ Thêm</button></div>
+ <div class="section"><div class="toolbar"><h2>👨‍🎓 Học sinh</h2>
+<input id="studentSearch" placeholder="Tìm học sinh...">
+<select id="classFilter" class="select"></select>
+<button class="primary" onclick="addStudent()">+ Thêm</button>
+<button class="secondary" onclick="document.getElementById('excelFile').click()">📥 Nhập Excel</button>
+<input id="excelFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
  <div class="notice" id="studentNotice"></div><div class="tablewrap"><table id="studentsTable"></table></div></div>
 </section>
 
