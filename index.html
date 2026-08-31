@@ -35,6 +35,7 @@
   <button data-page="students">👨‍🎓 Học sinh</button>
   <button data-page="competition">⭐ Thi đua tuần</button>
   <button data-page="attendance">📋 Điểm danh</button>
+  <button data-page="attendanceStats">📊 Thống kê điểm danh</button>
   <button data-page="activities">🎯 Hoạt động Đội</button>
   <button data-page="violations">🚨 Vi phạm</button>
   <button data-page="awards">🏆 Khen thưởng</button>
@@ -119,6 +120,58 @@
         <tbody>
           <tr>
             <td colspan="6">Chưa chọn danh sách.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</section>
+ <section id="attendanceStats" class="page">
+  <div class="section">
+
+    <div class="toolbar">
+      <h2>📊 THỐNG KÊ ĐIỂM DANH</h2>
+
+      <label>
+        Tháng:
+        <input id="attendanceStatsMonth" type="month">
+      </label>
+
+      <label>
+        Lớp:
+        <select id="attendanceStatsClass" class="select"></select>
+      </label>
+
+      <button class="primary" onclick="loadAttendanceStats()">
+        🔍 Xem thống kê
+      </button>
+    </div>
+
+    <div class="notice" id="attendanceStatsNotice">
+      Chọn tháng và lớp để xem thống kê điểm danh.
+    </div>
+
+    <div class="tablewrap">
+      <table id="attendanceStatsTable">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Mã HS</th>
+            <th>Họ tên</th>
+            <th>Lớp</th>
+            <th>Có mặt</th>
+            <th>Vắng có phép</th>
+            <th>Vắng không phép</th>
+            <th>Tổng vắng</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <td colspan="8">
+              Chưa có dữ liệu thống kê.
+            </td>
           </tr>
         </tbody>
       </table>
@@ -863,6 +916,37 @@ async function loadAttendance(){
 
   await loadAttendance();
 }
+function setupAttendanceStats(){
+
+  const monthInput = $("attendanceStatsMonth");
+  const classSelect = $("attendanceStatsClass");
+
+  if(!monthInput || !classSelect) return;
+
+  // Mặc định tháng hiện tại
+  if(!monthInput.value){
+    const now = new Date();
+    monthInput.value =
+      now.getFullYear()+"-"+
+      String(now.getMonth()+1).padStart(2,"0");
+  }
+
+  // Danh sách lớp theo quyền
+  const classes = allowedClasses();
+
+  classSelect.innerHTML =
+    classes
+      .map(c => `<option value="${c}">${c}</option>`)
+      .join("");
+
+  // Tài khoản Chi đội chỉ được xem lớp mình
+  if(!isAdmin()){
+    classSelect.value = profile.class_name;
+    classSelect.disabled = true;
+  }else{
+    classSelect.disabled = false;
+  }
+} 
  async function addActivity(){
 
   if(!isAdmin()){
@@ -998,7 +1082,7 @@ $("settingsMsg").innerHTML =
 
 await refreshAll();}
 function fillSettings(){$("schoolName").value=settings.school_name;$("currentWeek").value=settings.current_week;$("pt").value=settings.pt;$("pk").value=settings.pk;$("ptb").value=settings.ptb;$("py").value=settings.py}
-async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther();setupAttendance()}
+async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther();setupAttendance();setupAttendanceStats()}
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");$("pageTitle").textContent=b.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,"").trim()});
 $("weekSelect").onchange=renderCompetition;$("dashWeek").onchange=renderDashboard;$("studentSearch").oninput=renderStudents;$("classFilter").onchange=renderStudents;
 (async()=>{if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT"))return;sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const {data:{session}}=await sb.auth.getSession();if(session)await loadProfile();sb.auth.onAuthStateChange(async(_,s)=>{if(s)await loadProfile();else{$("app").classList.add("hidden");$("login").classList.remove("hidden")}})})();
