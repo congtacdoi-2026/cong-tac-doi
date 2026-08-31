@@ -74,7 +74,20 @@
  </div>
 </section>
 
-<section id="activities" class="page"><div class="section"><div class="toolbar"><h2>🎯 Hoạt động Đội</h2></div><div class="tablewrap"><table id="activitiesTable"></table></div></div></section>
+<section id="activities" class="page">
+  <div class="section">
+    <div class="toolbar">
+      <h2>🎯 Hoạt động Đội</h2>
+      <button id="addActivityBtn" class="primary" onclick="addActivity()">+ Thêm hoạt động</button>
+    </div>
+
+    <div class="notice" id="activityNotice"></div>
+
+    <div class="tablewrap">
+      <table id="activitiesTable"></table>
+    </div>
+  </div>
+</section>
 <section id="violations" class="page"><div class="section"><div class="toolbar"><h2>🚨 Vi phạm</h2><button class="primary" onclick="addViolation()">+ Ghi nhận</button></div><div class="tablewrap"><table id="violationsTable"></table></div></div></section>
 <section id="awards" class="page"><div class="section"><div class="toolbar">
   <h2>🏆 Khen thưởng</h2>
@@ -459,7 +472,52 @@ async function addStudent(){
   }
 }
 async function renderOther(){
- let {data:a}=await sb.from("activities").select("*").order("ngay",{ascending:false});$("activitiesTable").innerHTML="<thead><tr><th>Ngày</th><th>Hoạt động</th><th>Đối tượng</th><th>Ghi chú</th></tr></thead><tbody>"+(a||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ten_hoat_dong)}</td><td>${esc(x.doi_tuong)}</td><td>${esc(x.ghi_chu)}</td></tr>`).join("")+"</tbody>";
+ let {data:a,error:activityError}=await sb
+  .from("activities")
+  .select("*")
+  .order("ngay",{ascending:false});
+
+if(activityError){
+  alert("Không tải được Hoạt động Đội:\n"+activityError.message);
+  a=[];
+}
+
+if($("activityNotice")){
+  $("activityNotice").textContent=isAdmin()
+    ?"Tổng phụ trách có thể thêm, sửa và xóa các hoạt động."
+    :"Tài khoản Chi đội chỉ được xem danh sách hoạt động.";
+}
+
+if($("addActivityBtn")){
+  $("addActivityBtn").style.display=isAdmin()?"inline-block":"none";
+}
+
+$("activitiesTable").innerHTML=
+"<thead><tr>"+
+"<th>STT</th>"+
+"<th>Ngày</th>"+
+"<th>Hoạt động</th>"+
+"<th>Đối tượng</th>"+
+"<th>Ghi chú</th>"+
+(isAdmin()?"<th>Thao tác</th>":"")+
+"</tr></thead><tbody>"+
+
+(a||[]).map((x,i)=>
+`<tr>
+  <td>${i+1}</td>
+  <td>${esc(x.ngay||"")}</td>
+  <td><b>${esc(x.ten_hoat_dong||"")}</b></td>
+  <td>${esc(x.doi_tuong||"")}</td>
+  <td>${esc(x.ghi_chu||"")}</td>
+  ${isAdmin()?`
+  <td>
+    <button class="secondary" onclick="editActivity('${x.id}')">✏️ Sửa</button>
+    <button class="danger" onclick="deleteActivity('${x.id}')">🗑️ Xóa</button>
+  </td>`:""}
+</tr>`
+).join("")+
+
+"</tbody>";
  let {data:v}=await sb.from("violations").select("*").order("ngay",{ascending:false});$("violationsTable").innerHTML="<thead><tr><th>Ngày</th><th>Họ tên</th><th>Lớp</th><th>Nội dung</th><th>Điểm</th></tr></thead><tbody>"+(v||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ho_ten)}</td><td>${x.lop}</td><td>${esc(x.noi_dung)}</td><td>${x.diem}</td></tr>`).join("")+"</tbody>";
  let {data:r}=await sb.from("awards").select("*").order("ngay",{ascending:false});$("awardsTable").innerHTML="<thead><tr><th>Ngày</th><th>Đối tượng</th><th>Lớp</th><th>Thành tích</th></tr></thead><tbody>"+(r||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.doi_tuong)}</td><td>${x.lop||""}</td><td>${esc(x.thanh_tich)}</td></tr>`).join("")+"</tbody>";
 }
