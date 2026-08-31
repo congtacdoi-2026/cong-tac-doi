@@ -562,6 +562,131 @@ async function addAward(){
   alert("✅ Đã thêm khen thưởng thành công.");
   await renderOther();
 }
+async function addActivity(){
+
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách được thêm hoạt động.");
+    return;
+  }
+
+  let ngay=prompt(
+    "Ngày hoạt động (YYYY-MM-DD):",
+    new Date().toISOString().slice(0,10)
+  );
+  if(ngay===null || !ngay.trim()) return;
+
+  let ten=prompt("Tên hoạt động:");
+  if(ten===null || !ten.trim()) return;
+
+  let doiTuong=prompt("Đối tượng:");
+  if(doiTuong===null) return;
+
+  let ghiChu=prompt("Ghi chú:");
+  if(ghiChu===null) return;
+
+  const {error}=await sb.from("activities").insert({
+    ngay:ngay.trim(),
+    ten_hoat_dong:ten.trim(),
+    doi_tuong:doiTuong.trim(),
+    ghi_chu:ghiChu.trim()
+  });
+
+  if(error){
+    alert("❌ Không lưu được hoạt động:\n"+error.message);
+    return;
+  }
+
+  alert("✅ Đã thêm hoạt động.");
+  await refreshAll();
+}
+async function editActivity(id){
+
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách được sửa hoạt động.");
+    return;
+  }
+
+  const {data:x,error}=await sb
+    .from("activities")
+    .select("*")
+    .eq("id",id)
+    .single();
+
+  if(error || !x){
+    alert("Không tìm thấy hoạt động.");
+    return;
+  }
+
+  let ngay=prompt("Ngày hoạt động (YYYY-MM-DD):",x.ngay||"");
+  if(ngay===null) return;
+
+  let ten=prompt("Tên hoạt động:",x.ten_hoat_dong||"");
+  if(ten===null || !ten.trim()) return;
+
+  let doiTuong=prompt("Đối tượng:",x.doi_tuong||"");
+  if(doiTuong===null) return;
+
+  let ghiChu=prompt("Ghi chú:",x.ghi_chu||"");
+  if(ghiChu===null) return;
+
+  const {error:updateError}=await sb
+    .from("activities")
+    .update({
+      ngay:ngay.trim(),
+      ten_hoat_dong:ten.trim(),
+      doi_tuong:doiTuong.trim(),
+      ghi_chu:ghiChu.trim()
+    })
+    .eq("id",id);
+
+  if(updateError){
+    alert("❌ Không sửa được hoạt động:\n"+updateError.message);
+    return;
+  }
+
+  alert("✅ Đã cập nhật hoạt động.");
+  await refreshAll();
+}
+ async function deleteActivity(id){
+
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách được xóa hoạt động.");
+    return;
+  }
+
+  const {data:x,error}=await sb
+    .from("activities")
+    .select("id,ten_hoat_dong,ngay")
+    .eq("id",id)
+    .single();
+
+  if(error || !x){
+    alert("Không tìm thấy hoạt động.");
+    return;
+  }
+
+  const ok=confirm(
+    "⚠️ XÁC NHẬN XÓA HOẠT ĐỘNG\n\n"+
+    "Hoạt động: "+(x.ten_hoat_dong||"")+
+    "\nNgày: "+(x.ngay||"")+
+    "\n\nBạn có chắc chắn muốn xóa không?"
+  );
+
+  if(!ok)return;
+
+  const {error:deleteError}=await sb
+    .from("activities")
+    .delete()
+    .eq("id",id);
+
+  if(deleteError){
+    alert("❌ Không xóa được hoạt động:\n"+deleteError.message);
+    return;
+  }
+
+  alert("✅ Đã xóa hoạt động.");
+  await refreshAll();
+}
  async function addViolation(){if(!isAdmin()&&!profile.class_name){return}let name=prompt("Họ tên:");if(!name)return;let reason=prompt("Nội dung:");let point=Number(prompt("Điểm cộng/trừ:","-2"));let cls=isAdmin()?prompt("Lớp:",CLASSES[0]):profile.class_name;let {error}=await sb.from("violations").insert({ho_ten:name,lop:cls,noi_dung:reason,diem:point});if(error)alert(error.message);else renderOther()}
 async function saveSettings(){if(!isAdmin()){alert("Chỉ Tổng phụ trách được thay đổi.");return}let payload={id:true,school_name:$("schoolName").value,current_week:Number($("currentWeek").value),pt:Number($("pt").value),pk:Number($("pk").value),ptb:Number($("ptb").value),py:Number($("py").value),updated_at:new Date().toISOString()};let {error}=await sb.from("app_settings").upsert(payload);if(error){$("settingsMsg").innerHTML='<span class="error"> '+esc(error.message)+'</span>';return}settings=payload;
 
