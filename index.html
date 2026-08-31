@@ -174,12 +174,167 @@ async function renderDashboard(){
  $("dashRank").innerHTML="<thead><tr><th>Hạng</th><th>Chi đội</th><th>Học tập</th><th>Nề nếp</th><th>Tổng</th></tr></thead><tbody>"+r.map(x=>`<tr><td>${x.rank<=3?['','🥇','🥈','🥉'][x.rank]:x.rank}</td><td><b>${x.c}</b></td><td>${x.ht}</td><td>${x.nd}</td><td class="total">${x.total}</td></tr>`).join("")+"</tbody>";
 }
 async function renderStudents(){
- let q=($("studentSearch").value||"").toLowerCase(),f=$("classFilter").value||"",query=sb.from("students").select("*").order("lop").order("ho_ten");
- if(!isAdmin())query=query.eq("lop",profile.class_name);else if(f)query=query.eq("lop",f);
- const {data,error}=await query;if(error){alert(error.message);return}
- let a=(data||[]).filter(function(s){return !q || (String(s.ho_ten||"")+" "+String(s.ma_hs||"")).toLowerCase().includes(q);});
- $("studentsTable").innerHTML="<thead><tr><th>STT</th><th>Mã HS</th><th>Họ tên</th><th>Lớp</th><th>Giới tính</th><th>Ngày sinh</th><th>Đội viên</th><th>Chức vụ</th></tr></thead><tbody>"+a.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.ma_hs)}</td><td>${esc(s.ho_ten)}</td><td>${s.lop}</td><td>${esc(s.gioi_tinh)}</td><td>${esc(s.ngay_sinh)}</td><td>${s.la_doi_vien?"✓":"-"}</td><td>${esc(s.chuc_vu)}</td></tr>`).join("")+"</tbody>";
- $("studentNotice").textContent=isAdmin()?"Tổng phụ trách xem toàn bộ học sinh.":"Tài khoản này chỉ xem/quản lý học sinh của "+profile.class_name;
+ let q=($("studentSearch").value||"").toLowerCase(),
+     f=$("classFilter").value||"",
+     query=sb.from("students").select("*").order("lop").order("ho_ten");
+
+ if(!isAdmin())
+   query=query.eq("lop",profile.class_name);
+ else if(f)
+   query=query.eq("lop",f);
+
+ const {data,error}=await query;
+
+ if(error){
+   alert("Không tải được danh sách học sinh:\n"+error.message);
+   return;
+ }
+
+ let a=(data||[]).filter(s=>
+   !q ||
+   (`${s.ho_ten||""} ${s.ma_hs||""}`).toLowerCase().includes(q)
+ );
+
+ $("studentsTable").innerHTML=
+ "<thead><tr>"+
+ "<th>STT</th>"+
+ "<th>Mã HS</th>"+
+ "<th>Họ tên</th>"+
+ "<th>Lớp</th>"+
+ "<th>Giới tính</th>"+
+ "<th>Ngày sinh</th>"+
+ "<th>Đội viên</th>"+
+ "<th>Chức vụ</th>"+
+ "<th>Thao tác</th>"+
+ "</tr></thead><tbody>"+
+
+ a.map((s,i)=>
+ `<tr>
+   <td>${i+1}</td>
+   <td>${esc(s.ma_hs)}</td>
+   <td><b>${esc(s.ho_ten)}</b></td>
+   <td>${esc(s.lop)}</td>
+   <td>${esc(s.gioi_tinh)}</td>
+   <td>${esc(s.ngay_sinh)}</td>
+   <td>${s.la_doi_vien?"✓":"-"}</td>
+   <td>${esc(s.chuc_vu)}</td>
+   <td>
+     <button class="secondary" onclick="editStudent('${s.id}')">✏️ Sửa</button>
+     <button class="danger" onclick="deleteStudent('${s.id}','${esc(s.ho_ten)}')">🗑️ Xóa</button>
+   </td>
+ </tr>`
+ ).join("")+
+
+ "</tbody>";
+ 
+ $("studentNotice").textContent=isAdmin()
+   ?"Tổng phụ trách xem và quản lý toàn bộ học sinh."
+   :"Tài khoản này chỉ xem và quản lý học sinh của "+profile.class_name;
+}
+ async function editStudent(id){
+
+ const {data:s,error}=await sb
+   .from("students")
+   .select("*")
+   .eq("id",id)
+   .single();
+
+ if(error || !s){
+   alert("Không tìm thấy học sinh.");
+   return;
+ }
+
+ if(!isAdmin() && s.lop!==profile.class_name){
+   alert("Bạn không có quyền sửa học sinh của lớp này.");
+   return;
+ }
+
+ let name=prompt("Họ và tên:",s.ho_ten||"");
+ if(name===null)return;
+
+ let ma=prompt("Mã học sinh:",s.ma_hs||"");
+ if(ma===null)return;
+
+ let lop=prompt("Lớp:",s.lop||"");
+ if(lop===null)return;
+
+ if(!isAdmin() && lop!==profile.class_name){
+   alert("Bạn chỉ được sửa học sinh của lớp "+profile.class_name);
+   return;
+ }
+
+ let gt=prompt("Giới tính:",s.gioi_tinh||"");
+ if(gt===null)return;
+
+ let ns=prompt("Ngày sinh:",s.ngay_sinh||"");
+ if(ns===null)return;
+
+ let dv=confirm("Học sinh này có phải Đội viên không?\n\nOK = Có\nCancel = Không");
+
+ let cv=prompt("Chức vụ:",s.chuc_vu||"");
+ if(cv===null)return;
+
+ const {error:updateError}=await sb
+   .from("students")
+   .update({
+     ma_hs:ma.trim(),
+     ho_ten:name.trim(),
+     lop:lop.trim(),
+     gioi_tinh:gt.trim(),
+     ngay_sinh:ns.trim(),
+     la_doi_vien:dv,
+     chuc_vu:cv.trim()
+   })
+   .eq("id",id);
+
+ if(updateError){
+   alert("❌ Không sửa được học sinh:\n"+updateError.message);
+   return;
+ }
+
+ alert("✅ Đã cập nhật thông tin học sinh.");
+ await refreshAll();
+}
+ async function deleteStudent(id,name){
+
+ const {data:s,error}=await sb
+   .from("students")
+   .select("id,ho_ten,lop")
+   .eq("id",id)
+   .single();
+
+ if(error || !s){
+   alert("Không tìm thấy học sinh.");
+   return;
+ }
+
+ if(!isAdmin() && s.lop!==profile.class_name){
+   alert("Bạn không có quyền xóa học sinh của lớp này.");
+   return;
+ }
+
+ const ok=confirm(
+   "⚠️ XÁC NHẬN XÓA HỌC SINH\n\n"+
+   "Họ tên: "+(s.ho_ten||name)+"\n"+
+   "Lớp: "+(s.lop||"")+
+   "\n\nDữ liệu học sinh này sẽ bị xóa khỏi danh sách.\n"+
+   "Bạn có chắc chắn muốn xóa không?"
+ );
+
+ if(!ok)return;
+
+ const {error:deleteError}=await sb
+   .from("students")
+   .delete()
+   .eq("id",id);
+
+ if(deleteError){
+   alert("❌ Không xóa được học sinh:\n"+deleteError.message);
+   return;
+ }
+
+ alert("✅ Đã xóa học sinh "+(s.ho_ten||name)+".");
+ await refreshAll();
 }
 async function addStudent(){
   if(!isAdmin()){
