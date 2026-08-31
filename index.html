@@ -986,7 +986,7 @@ function setupAttendanceStats(){
   // ==============================
 
   const { data: students, error: studentError } =
-    await supabaseClient
+    await sb
       .from("students")
       .select("*")
       .eq("lop", lop)
@@ -1002,7 +1002,7 @@ function setupAttendanceStats(){
   // ==============================
 
   const { data: attendance, error: attendanceError } =
-    await supabaseClient
+    await sb
       .from("attendance")
       .select("student_id, ngay, trang_thai")
       .eq("lop", lop)
