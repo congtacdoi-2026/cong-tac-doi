@@ -34,6 +34,7 @@
   <button class="active" data-page="dashboard">🏠 Tổng quan</button>
   <button data-page="students">👨‍🎓 Học sinh</button>
   <button data-page="competition">⭐ Thi đua tuần</button>
+  <button data-page="attendance">📋 Điểm danh</button>
   <button data-page="activities">🎯 Hoạt động Đội</button>
   <button data-page="violations">🚨 Vi phạm</button>
   <button data-page="awards">🏆 Khen thưởng</button>
@@ -74,7 +75,58 @@
  </div>
 </section>
 
-<section id="activities" class="page">
+<section id="attendance" class="page">
+  <div class="section">
+
+    <div class="toolbar">
+      <h2>📋 ĐIỂM DANH HỌC SINH</h2>
+
+      <label>
+        Ngày:
+        <input id="attendanceDate" type="date">
+      </label>
+
+      <label>
+        Lớp:
+        <select id="attendanceClass" class="select"></select>
+      </label>
+
+      <button class="primary" onclick="loadAttendance()">
+        🔄 Xem danh sách
+      </button>
+
+      <button class="primary" onclick="saveAttendance()">
+        💾 Lưu điểm danh
+      </button>
+    </div>
+
+    <div class="notice" id="attendanceNotice">
+      Chọn ngày và lớp để bắt đầu điểm danh.
+    </div>
+
+    <div class="tablewrap">
+      <table id="attendanceTable">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Mã HS</th>
+            <th>Họ tên</th>
+            <th>Lớp</th>
+            <th>Trạng thái</th>
+            <th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6">Chưa chọn danh sách.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</section>
+ <section id="activities" class="page">
   <div class="section">
     <div class="toolbar">
       <h2>🎯 Hoạt động Đội</h2>
@@ -562,7 +614,256 @@ async function addAward(){
   alert("✅ Đã thêm khen thưởng thành công.");
   await renderOther();
 }
-async function addActivity(){
+function setupAttendance(){
+  const dateInput = $("attendanceDate");
+  const classSelect = $("attendanceClass");
+
+  if(!dateInput || !classSelect) return;
+
+  if(!dateInput.value){
+    dateInput.value = new Date().toISOString().slice(0,10);
+  }
+
+  const classes = allowedClasses();
+
+  classSelect.innerHTML = classes
+    .map(c => `<option value="${c}">${c}</option>`)
+    .join("");
+
+  if(!isAdmin()){
+    classSelect.value = profile.class_name;
+    classSelect.disabled = true;
+  }else{
+    classSelect.disabled = false;
+  }
+}
+
+async function loadAttendance(){
+
+  if(!profile){
+    alert("Chưa đăng nhập.");
+    return;
+  }
+
+  const ngay = $("attendanceDate").value;
+  const lop = $("attendanceClass").value;
+
+  if(!ngay || !lop){
+    alert("Vui lòng chọn ngày và lớp.");
+    return;
+  }
+
+  if(!isAdmin() && lop !== profile.class_name){
+    alert("Bạn chỉ được điểm danh lớp "+profile.class_name+".");
+    return;
+  }
+
+  const {data:students,error:studentError} = await sb
+    .from("students")
+    .select("*")
+    .eq("lop",lop)
+    .order("ho_ten");
+
+  if(studentError){
+    alert("Không tải được danh sách học sinh:\n"+studentError.message);
+    return;
+  }
+
+  const {data:attendance,error:attendanceError} = await sb
+    .from("attendance")
+    .select("*")
+    .eq("ngay",ngay)
+    .eq("lop",lop);
+
+  if(attendanceError){
+    alert("Không tải được dữ liệu điểm danh:\n"+attendanceError.message);
+    return;
+  }
+
+  const attendanceMap = {};
+  (attendance||[]).forEach(a=>{
+    attendanceMap[a.student_id] = a;
+  });
+
+  if(!students || !students.length){
+    $("attendanceTable").innerHTML =
+      "<tbody><tr><td colspan='6'>Lớp này chưa có học sinh.</td></tr></tbody>";
+
+    $("attendanceNotice").textContent =
+      "Không có học sinh trong lớp "+lop+".";
+    return;
+  }
+
+  let html =
+    "<thead><tr>"+
+    "<th>STT</th>"+
+    "<th>Mã HS</th>"+
+    "<th>Họ tên</th>"+
+    "<th>Lớp</th>"+
+    "<th>Trạng thái</th>"+
+    "<th>Ghi chú</th>"+
+    "</tr></thead><tbody>";
+
+  students.forEach((s,i)=>{
+
+    const a = attendanceMap[s.id];
+
+    const status = a?.trang_thai || "co_mat";
+    const note = a?.ghi_chu || "";
+
+    html += `
+      <tr>
+        <td>${i+1}</td>
+        <td>${esc(s.ma_hs||"")}</td>
+        <td><b>${esc(s.ho_ten||"")}</b></td>
+        <td>${esc(s.lop||"")}</td>
+
+        <td>
+          <select
+            class="attendance-status"
+            data-student-id="${s.id}"
+          >
+            <option value="co_mat" ${status==="co_mat"?"selected":""}>
+              🟢 Có mặt
+            </option>
+
+            <option value="vang_phep" ${status==="vang_phep"?"selected":""}>
+              🟡 Vắng có phép
+            </option>
+
+            <option value="vang_khong_phep" ${status==="vang_khong_phep"?"selected":""}>
+              🔴 Vắng không phép
+            </option>
+          </select>
+        </td>
+
+        <td>
+          <input
+            class="attendance-note"
+            data-student-id="${s.id}"
+            value="${esc(note)}"
+            placeholder="Ghi chú..."
+          >
+        </td>
+      </tr>
+    `;
+  });
+
+  html += "</tbody>";
+
+  $("attendanceTable").innerHTML = html;
+
+  $("attendanceNotice").innerHTML =
+    "Đang điểm danh <b>"+lop+"</b> ngày <b>"+ngay+"</b>. "+
+    "Nếu đánh dấu nhầm, bạn có thể chọn lại trạng thái rồi lưu.";
+}
+ async function saveAttendance(){
+
+  if(!profile){
+    alert("Chưa đăng nhập.");
+    return;
+  }
+
+  const ngay = $("attendanceDate").value;
+  const lop = $("attendanceClass").value;
+
+  if(!ngay || !lop){
+    alert("Vui lòng chọn ngày và lớp.");
+    return;
+  }
+
+  if(!isAdmin() && lop !== profile.class_name){
+    alert("Bạn chỉ được điểm danh lớp "+profile.class_name+".");
+    return;
+  }
+
+  const statusInputs = document.querySelectorAll(".attendance-status");
+  const noteInputs = document.querySelectorAll(".attendance-note");
+
+  if(!statusInputs.length){
+    alert("Chưa có danh sách học sinh để lưu.");
+    return;
+  }
+
+  let saved = 0;
+
+  for(const input of statusInputs){
+
+    const studentId = input.dataset.studentId;
+    const trangThai = input.value;
+
+    const noteInput = document.querySelector(
+      `.attendance-note[data-student-id="${studentId}"]`
+    );
+
+    const ghiChu = noteInput ? noteInput.value.trim() : "";
+
+    const {data:existing,error:findError} = await sb
+      .from("attendance")
+      .select("id")
+      .eq("student_id",studentId)
+      .eq("ngay",ngay)
+      .maybeSingle();
+
+    if(findError){
+      alert(
+        "Không kiểm tra được điểm danh của học sinh:\n"+
+        findError.message
+      );
+      return;
+    }
+
+    let error;
+
+    if(existing){
+
+      const result = await sb
+        .from("attendance")
+        .update({
+          lop:lop,
+          trang_thai:trangThai,
+          ghi_chu:ghiChu,
+          updated_at:new Date().toISOString()
+        })
+        .eq("id",existing.id);
+
+      error = result.error;
+
+    }else{
+
+      const result = await sb
+        .from("attendance")
+        .insert({
+          student_id:studentId,
+          ngay:ngay,
+          lop:lop,
+          trang_thai:trangThai,
+          ghi_chu:ghiChu
+        });
+
+      error = result.error;
+    }
+
+    if(error){
+      alert(
+        "❌ Không lưu được điểm danh:\n"+
+        error.message
+      );
+      return;
+    }
+
+    saved++;
+  }
+
+  alert(
+    "✅ Đã lưu điểm danh "+saved+
+    " học sinh lớp "+lop+
+    " ngày "+ngay+"."
+  );
+
+  await loadAttendance();
+}
+ async function addActivity(){
 
   if(!isAdmin()){
     alert("Chỉ Tổng phụ trách được thêm hoạt động.");
@@ -697,7 +998,7 @@ $("settingsMsg").innerHTML =
 
 await refreshAll();}
 function fillSettings(){$("schoolName").value=settings.school_name;$("currentWeek").value=settings.current_week;$("pt").value=settings.pt;$("pk").value=settings.pk;$("ptb").value=settings.ptb;$("py").value=settings.py}
-async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther()}
+async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther();setupAttendance()}
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");$("pageTitle").textContent=b.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,"").trim()});
 $("weekSelect").onchange=renderCompetition;$("dashWeek").onchange=renderDashboard;$("studentSearch").oninput=renderStudents;$("classFilter").onchange=renderStudents;
 (async()=>{if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT"))return;sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const {data:{session}}=await sb.auth.getSession();if(session)await loadProfile();sb.auth.onAuthStateChange(async(_,s)=>{if(s)await loadProfile();else{$("app").classList.add("hidden");$("login").classList.remove("hidden")}})})();
