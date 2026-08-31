@@ -1040,21 +1040,21 @@ function setupAttendanceStats(){
 
     const status = (record.trang_thai || "").trim();
 
-    if(status === "Có mặt"){
+    if(status === "co_mat"){
 
-      item.co_mat++;
+  item.co_mat++;
 
-    }else if(status === "Vắng có phép"){
+}else if(status === "vang_phep"){
 
-      item.vang_co_phep++;
-      item.tong_vang++;
+  item.vang_co_phep++;
+  item.tong_vang++;
 
-    }else if(status === "Vắng không phép"){
+}else if(status === "vang_khong_phep"){
 
-      item.vang_khong_phep++;
-      item.tong_vang++;
+  item.vang_khong_phep++;
+  item.tong_vang++;
 
-    }
+}
 
   });
 
