@@ -308,7 +308,48 @@ async function renderOther(){
  let {data:v}=await sb.from("violations").select("*").order("ngay",{ascending:false});$("violationsTable").innerHTML="<thead><tr><th>Ngày</th><th>Họ tên</th><th>Lớp</th><th>Nội dung</th><th>Điểm</th></tr></thead><tbody>"+(v||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.ho_ten)}</td><td>${x.lop}</td><td>${esc(x.noi_dung)}</td><td>${x.diem}</td></tr>`).join("")+"</tbody>";
  let {data:r}=await sb.from("awards").select("*").order("ngay",{ascending:false});$("awardsTable").innerHTML="<thead><tr><th>Ngày</th><th>Đối tượng</th><th>Lớp</th><th>Thành tích</th></tr></thead><tbody>"+(r||[]).map(x=>`<tr><td>${x.ngay}</td><td>${esc(x.doi_tuong)}</td><td>${x.lop||""}</td><td>${esc(x.thanh_tich)}</td></tr>`).join("")+"</tbody>";
 }
-async function addViolation(){if(!isAdmin()&&!profile.class_name){return}let name=prompt("Họ tên:");if(!name)return;let reason=prompt("Nội dung:");let point=Number(prompt("Điểm cộng/trừ:","-2"));let cls=isAdmin()?prompt("Lớp:",CLASSES[0]):profile.class_name;let {error}=await sb.from("violations").insert({ho_ten:name,lop:cls,noi_dung:reason,diem:point});if(error)alert(error.message);else renderOther()}
+async function addAward(){
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách mới được thêm khen thưởng.");
+    return;
+  }
+
+  let ngay=prompt(
+    "Ngày khen thưởng (YYYY-MM-DD):",
+    new Date().toISOString().slice(0,10)
+  );
+  if(!ngay)return;
+
+  let doiTuong=prompt("Đối tượng được khen thưởng:");
+  if(!doiTuong)return;
+
+  let lop=prompt("Lớp:",CLASSES[0]);
+  if(!lop)return;
+
+  if(!CLASSES.includes(lop)){
+    alert("Lớp không nằm trong danh sách 12 chi đội.");
+    return;
+  }
+
+  let thanhTich=prompt("Thành tích:");
+  if(!thanhTich)return;
+
+  const {error}=await sb.from("awards").insert({
+    ngay:ngay,
+    doi_tuong:doiTuong,
+    lop:lop,
+    thanh_tich:thanhTich
+  });
+
+  if(error){
+    alert("Không lưu được khen thưởng:\n"+error.message);
+    return;
+  }
+
+  alert("✅ Đã thêm khen thưởng thành công.");
+  await renderOther();
+}
+ async function addViolation(){if(!isAdmin()&&!profile.class_name){return}let name=prompt("Họ tên:");if(!name)return;let reason=prompt("Nội dung:");let point=Number(prompt("Điểm cộng/trừ:","-2"));let cls=isAdmin()?prompt("Lớp:",CLASSES[0]):profile.class_name;let {error}=await sb.from("violations").insert({ho_ten:name,lop:cls,noi_dung:reason,diem:point});if(error)alert(error.message);else renderOther()}
 async function saveSettings(){if(!isAdmin()){alert("Chỉ Tổng phụ trách được thay đổi.");return}let payload={id:true,school_name:$("schoolName").value,current_week:Number($("currentWeek").value),pt:Number($("pt").value),pk:Number($("pk").value),ptb:Number($("ptb").value),py:Number($("py").value),updated_at:new Date().toISOString()};let {error}=await sb.from("app_settings").upsert(payload);if(error){$("settingsMsg").innerHTML='<span class="error"> '+esc(error.message)+'</span>';return}settings=payload;
 
 $("schoolNameDisplay").textContent = settings.school_name;
