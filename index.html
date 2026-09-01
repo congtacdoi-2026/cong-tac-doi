@@ -715,7 +715,8 @@ async function loadAttendance(){
     .from("students")
     .select("*")
     .eq("lop",lop)
-    .order("ho_ten");
+    .order("ma_hs")
+.order("ho_ten");
 
   if(studentError){
     alert("Không tải được danh sách học sinh:\n"+studentError.message);
