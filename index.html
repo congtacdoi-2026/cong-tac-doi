@@ -294,7 +294,7 @@ async function renderDashboard(){
 async function renderStudents(){
  let q=($("studentSearch").value||"").toLowerCase(),
      f=$("classFilter").value||"",
-     query=sb.from("students").select("*").order("lop").order("ho_ten");
+    query=sb.from("students").select("*").order("lop").order("ma_hs").order("ho_ten");
 
  if(!isAdmin())
    query=query.eq("lop",profile.class_name);
