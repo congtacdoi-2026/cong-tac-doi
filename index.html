@@ -183,6 +183,60 @@
 
   </div>
 </section>
+ <section>
+
+  <div class="toolbar">
+
+    <h2>🏫 THỐNG KÊ ĐIỂM DANH TOÀN TRƯỜNG</h2>
+
+    <label>
+      Ngày:
+      <input id="attendanceSchoolDate" type="date">
+    </label>
+
+    <button
+      class="primary"
+      onclick="loadSchoolAttendanceStats()">
+      🔎 Xem thống kê
+    </button>
+
+  </div>
+
+  <div
+    class="notice"
+    id="attendanceSchoolStatsNotice">
+    Chọn ngày để xem thống kê điểm danh toàn trường.
+  </div>
+
+  <div class="tablewrap">
+
+    <table id="attendanceSchoolStatsTable">
+
+      <thead>
+        <tr>
+          <th>Lớp</th>
+          <th>Có mặt</th>
+          <th>Vắng có phép</th>
+          <th>Vắng không phép</th>
+          <th>Tổng vắng</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        <tr>
+          <td colspan="5">
+            Chưa có dữ liệu thống kê.
+          </td>
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</section>
  <section id="activities" class="page">
   <div class="section">
     <div class="toolbar">
@@ -1303,6 +1357,209 @@ function setupAttendanceStats(){
   }
 
   table.querySelector("tbody").innerHTML = html;
+
+}
+ async function loadSchoolAttendanceStats(){
+
+  const dateInput = $("attendanceSchoolDate");
+  const table = $("attendanceSchoolStatsTable");
+  const notice = $("attendanceSchoolStatsNotice");
+
+  if(!dateInput || !table || !notice) return;
+
+  const ngay = dateInput.value;
+
+  if(!ngay){
+    alert("Vui lòng chọn ngày.");
+    return;
+  }
+
+  notice.innerHTML =
+    `⏳ Đang tải thống kê điểm danh toàn trường ngày <b>${ngay}</b>...`;
+
+  // ==============================
+  // 1. DANH SÁCH 12 LỚP
+  // ==============================
+
+  const classes = [
+    "6A7",
+    "6A8",
+    "6A9",
+    "7A7",
+    "7A8",
+    "7A9",
+    "8A6",
+    "8A7",
+    "8A8",
+    "9A8",
+    "9A9",
+    "9A10"
+  ];
+
+  // ==============================
+  // 2. LẤY DỮ LIỆU ĐIỂM DANH TRONG NGÀY
+  // ==============================
+
+  const { data: attendance, error } =
+    await sb
+      .from("attendance")
+      .select("student_id, lop, trang_thai, ngay")
+      .eq("ngay", ngay);
+
+  if(error){
+
+    alert(
+      "Không tải được dữ liệu điểm danh:\n" +
+      error.message
+    );
+
+    return;
+  }
+
+  // ==============================
+  // 3. KHỞI TẠO THỐNG KÊ 12 LỚP
+  // ==============================
+
+  const stats = {};
+
+  classes.forEach(lop => {
+
+    stats[lop] = {
+      co_mat: 0,
+      vang_co_phep: 0,
+      vang_khong_phep: 0,
+      tong_vang: 0
+    };
+
+  });
+
+  // ==============================
+  // 4. TÍNH SỐ LƯỢNG
+  // ==============================
+
+  (attendance || []).forEach(record => {
+
+    const lop = record.lop;
+
+    if(!stats[lop]) return;
+
+    const status =
+      (record.trang_thai || "").trim();
+
+    if(status === "co_mat"){
+
+      stats[lop].co_mat++;
+
+    }else if(status === "vang_phep"){
+
+      stats[lop].vang_co_phep++;
+      stats[lop].tong_vang++;
+
+    }else if(status === "vang_khong_phep"){
+
+      stats[lop].vang_khong_phep++;
+      stats[lop].tong_vang++;
+
+    }
+
+  });
+
+  // ==============================
+  // 5. TÍNH TỔNG TOÀN TRƯỜNG
+  // ==============================
+
+  let totalCoMat = 0;
+  let totalVangPhep = 0;
+  let totalVangKhongPhep = 0;
+  let totalVang = 0;
+
+  let html = "";
+
+  // ==============================
+  // 6. HIỂN THỊ 12 LỚP
+  // ==============================
+
+  classes.forEach(lop => {
+
+    const item = stats[lop];
+
+    totalCoMat += item.co_mat;
+    totalVangPhep += item.vang_co_phep;
+    totalVangKhongPhep += item.vang_khong_phep;
+    totalVang += item.tong_vang;
+
+    html += `
+      <tr>
+
+        <td>
+          <b>${lop}</b>
+        </td>
+
+        <td>
+          ${item.co_mat}
+        </td>
+
+        <td>
+          ${item.vang_co_phep}
+        </td>
+
+        <td>
+          ${item.vang_khong_phep}
+        </td>
+
+        <td>
+          <b>${item.tong_vang}</b>
+        </td>
+
+      </tr>
+    `;
+
+  });
+
+  // ==============================
+  // 7. DÒNG TỔNG TOÀN TRƯỜNG
+  // ==============================
+
+  html += `
+    <tr>
+
+      <td>
+        <b>TOÀN TRƯỜNG</b>
+      </td>
+
+      <td>
+        <b>${totalCoMat}</b>
+      </td>
+
+      <td>
+        <b>${totalVangPhep}</b>
+      </td>
+
+      <td>
+        <b>${totalVangKhongPhep}</b>
+      </td>
+
+      <td>
+        <b>${totalVang}</b>
+      </td>
+
+    </tr>
+  `;
+
+  // ==============================
+  // 8. ĐƯA DỮ LIỆU VÀO BẢNG
+  // ==============================
+
+  const tbody = table.querySelector("tbody");
+
+  if(tbody){
+
+    tbody.innerHTML = html;
+
+  }
+
+  notice.innerHTML =
+    `✅ Đã thống kê điểm danh toàn trường ngày <b>${ngay}</b>.`;
 
 }
  async function addActivity(){
