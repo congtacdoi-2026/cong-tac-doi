@@ -137,6 +137,10 @@
         Tháng:
         <input id="attendanceStatsMonth" type="month">
       </label>
+     <label>
+  Ngày:
+  <input id="attendanceStatsDate" type="date">
+</label>
 
       <label>
         Lớp:
@@ -1073,6 +1077,7 @@ function setupAttendanceStats(){
  async function loadAttendanceStats(){
 
   const monthInput = $("attendanceStatsMonth");
+  const dateInput = $("attendanceStatsDate");
   const classSelect = $("attendanceStatsClass");
   const table = $("attendanceStatsTable");
   const notice = $("attendanceStatsNotice");
@@ -1080,6 +1085,7 @@ function setupAttendanceStats(){
   if(!monthInput || !classSelect || !table) return;
 
   const month = monthInput.value;
+  const date = dateInput ? dateInput.value : "";
   const lop = classSelect.value;
 
   if(!month){
@@ -1092,17 +1098,32 @@ function setupAttendanceStats(){
     return;
   }
 
-  // Xác định ngày đầu và ngày cuối tháng
-  const startDate = month + "-01";
+  // Nếu có chọn ngày thì thống kê ngày đó
+  const isDaily = !!date;
 
-  const [year, mon] = month.split("-").map(Number);
-  const lastDay = new Date(year, mon, 0).getDate();
+  let startDate;
+  let endDate;
 
-  const endDate =
-    month + "-" + String(lastDay).padStart(2,"0");
+  if(isDaily){
+
+    startDate = date;
+    endDate = date;
+
+  }else{
+
+    // Thống kê cả tháng
+    startDate = month + "-01";
+
+    const [year, mon] = month.split("-").map(Number);
+    const lastDay = new Date(year, mon, 0).getDate();
+
+    endDate =
+      month + "-" + String(lastDay).padStart(2,"0");
+
+  }
 
   notice.innerHTML =
-    `⏳ Đang tải thống kê lớp <b>${lop}</b> tháng <b>${month}</b>...`;
+    `⏳ Đang tải thống kê lớp <b>${lop}</b>...`;
 
   // ==============================
   // 1. LẤY DANH SÁCH HỌC SINH
@@ -1116,12 +1137,15 @@ function setupAttendanceStats(){
       .order("ma_hs", { ascending: true });
 
   if(studentError){
-    alert("Không tải được danh sách học sinh:\n" + studentError.message);
+    alert(
+      "Không tải được danh sách học sinh:\n" +
+      studentError.message
+    );
     return;
   }
 
   // ==============================
-  // 2. LẤY DỮ LIỆU ĐIỂM DANH TRONG THÁNG
+  // 2. LẤY DỮ LIỆU ĐIỂM DANH
   // ==============================
 
   const { data: attendance, error: attendanceError } =
@@ -1133,12 +1157,15 @@ function setupAttendanceStats(){
       .lte("ngay", endDate);
 
   if(attendanceError){
-    alert("Không tải được dữ liệu điểm danh:\n" + attendanceError.message);
+    alert(
+      "Không tải được dữ liệu điểm danh:\n" +
+      attendanceError.message
+    );
     return;
   }
 
   // ==============================
-  // 3. TÍNH THỐNG KÊ TỪNG HỌC SINH
+  // 3. TÍNH THỐNG KÊ
   // ==============================
 
   const stats = {};
@@ -1161,28 +1188,72 @@ function setupAttendanceStats(){
 
     if(!item) return;
 
-    const status = (record.trang_thai || "").trim();
+    const status =
+      (record.trang_thai || "").trim();
 
     if(status === "co_mat"){
 
-  item.co_mat++;
+      item.co_mat++;
 
-}else if(status === "vang_phep"){
+    }else if(status === "vang_phep"){
 
-  item.vang_co_phep++;
-  item.tong_vang++;
+      item.vang_co_phep++;
+      item.tong_vang++;
 
-}else if(status === "vang_khong_phep"){
+    }else if(status === "vang_khong_phep"){
 
-  item.vang_khong_phep++;
-  item.tong_vang++;
+      item.vang_khong_phep++;
+      item.tong_vang++;
 
-}
+    }
 
   });
 
   // ==============================
-  // 4. HIỂN THỊ BẢNG
+  // 4. TỔNG HỢP NẾU XEM THEO NGÀY
+  // ==============================
+
+  if(isDaily){
+
+    let tongCoMat = 0;
+    let tongVangPhep = 0;
+    let tongVangKhongPhep = 0;
+
+    students.forEach(student => {
+
+      const item = stats[student.id];
+
+      tongCoMat += item.co_mat;
+      tongVangPhep += item.vang_co_phep;
+      tongVangKhongPhep += item.vang_khong_phep;
+
+    });
+
+    notice.innerHTML = `
+      <b>📅 Thống kê điểm danh ngày ${date} - Lớp ${lop}</b>
+      <br><br>
+      <span style="margin-right:20px;">
+        ✅ Có mặt: <b>${tongCoMat}</b>
+      </span>
+
+      <span style="margin-right:20px;">
+        🟡 Vắng có phép: <b>${String(tongVangPhep).padStart(2,"0")}</b>
+      </span>
+
+      <span>
+        🔴 Vắng không phép: <b>${String(tongVangKhongPhep).padStart(2,"0")}</b>
+      </span>
+    `;
+
+  }else{
+
+    notice.innerHTML =
+      `✅ Đã thống kê điểm danh lớp <b>${lop}</b> từ ngày <b>${startDate}</b> đến <b>${endDate}</b>.`;
+
+  }
+
+  // ==============================
+  // 5. HIỂN THỊ BẢNG
   // ==============================
 
   let html = "";
@@ -1193,6 +1264,7 @@ function setupAttendanceStats(){
 
     html += `
       <tr>
+
         <td>${index + 1}</td>
 
         <td>${student.ma_hs || ""}</td>
@@ -1212,6 +1284,7 @@ function setupAttendanceStats(){
         <td>
           <b>${item.tong_vang}</b>
         </td>
+
       </tr>
     `;
 
@@ -1230,9 +1303,6 @@ function setupAttendanceStats(){
   }
 
   table.querySelector("tbody").innerHTML = html;
-
-  notice.innerHTML =
-    `✅ Đã thống kê điểm danh lớp <b>${lop}</b> từ ngày <b>${startDate}</b> đến <b>${endDate}</b>.`;
 
 }
  async function addActivity(){
