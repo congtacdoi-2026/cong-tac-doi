@@ -200,7 +200,39 @@
 </div><div class="tablewrap"><table id="awardsTable"></table></div></div></section>
 
 <section id="settings" class="page"><div class="section">
- <h2>⚙️ Cài đặt</h2><div class="notice">Chỉ <b>Tổng phụ trách</b> được thay đổi tên trường và hệ số điểm.</div>
+ <div class="notice">
+  Đổi mật khẩu tài khoản
+</div>
+
+<div style="margin-top:15px;padding:15px;border:1px solid #ddd;border-radius:10px">
+  <h3>🔐 Đổi mật khẩu</h3>
+
+  <div id="adminPasswordBox" class="hidden">
+    <label>Chọn tài khoản
+      <select id="passwordUser" style="width:100%;padding:10px">
+      </select>
+    </label>
+  </div>
+
+  <label style="display:block;margin-top:10px">
+    Mật khẩu mới
+    <input id="newPassword" type="password" minlength="6"
+           style="width:100%;padding:10px">
+  </label>
+
+  <label style="display:block;margin-top:10px">
+    Nhập lại mật khẩu mới
+    <input id="newPassword2" type="password" minlength="6"
+           style="width:100%;padding:10px">
+  </label>
+
+  <button class="primary" style="margin-top:14px"
+          onclick="changePassword()">
+    🔑 Đổi mật khẩu
+  </button>
+
+  <span id="passwordMsg"></span>
+</div>
  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
   <label>Tên trường<input id="schoolName" style="width:100%"></label>
   <label>Tuần hiện tại<input id="currentWeek" type="number" min="1" max="52" style="width:100%"></label>
@@ -249,11 +281,101 @@ function showApp(){
  $("userInfo").textContent =
    (profile.display_name || me.email) + " · " + (profile.class_name || "Toàn trường");
 
- if(!isAdmin()){
-   $("settings").classList.add("hidden");
- }
+ loadPasswordUsers();
 }
-function weeks(sel){sel.innerHTML="";for(let i=1;i<=52;i++){let o=document.createElement("option");o.value=i;o.textContent="Tuần "+i;sel.appendChild(o)}sel.value=settings.current_week}
+async function loadPasswordUsers(){
+  const box=$("adminPasswordBox");
+
+  if(!isAdmin()){
+    box.classList.add("hidden");
+    return;
+  }
+
+  box.classList.remove("hidden");
+
+  const {data,error}=await sb
+    .from("profiles")
+    .select("id,display_name,class_name,role")
+    .order("class_name");
+
+  if(error){
+    $("passwordMsg").textContent="Không tải được danh sách tài khoản.";
+    return;
+  }
+
+  const users=(data||[]).filter(x=>x.role!=="admin");
+
+  $("passwordUser").innerHTML=
+    '<option value="">-- Chọn tài khoản lớp --</option>'+
+    users.map(x=>
+      `<option value="${x.id}">
+        ${esc(x.class_name||x.display_name||"Tài khoản")}
+      </option>`
+    ).join("");
+}
+ async function changePassword(){
+
+  const p1=$("newPassword").value;
+  const p2=$("newPassword2").value;
+
+  if(p1.length<6){
+    $("passwordMsg").textContent="Mật khẩu phải có ít nhất 6 ký tự.";
+    return;
+  }
+
+  if(p1!==p2){
+    $("passwordMsg").textContent="Hai mật khẩu không giống nhau.";
+    return;
+  }
+
+  $("passwordMsg").textContent="Đang xử lý...";
+
+  if(isAdmin()){
+
+    const userId=$("passwordUser").value;
+
+    if(!userId){
+      $("passwordMsg").textContent="Hãy chọn tài khoản lớp.";
+      return;
+    }
+
+    const {data,error}=await sb.functions.invoke(
+      "admin-change-password",
+      {
+        body:{
+          user_id:userId,
+          password:p1
+        }
+      }
+    );
+
+    if(error){
+      $("passwordMsg").textContent=
+        "Không đổi được mật khẩu: "+error.message;
+      return;
+    }
+
+    $("passwordMsg").textContent="✅ Đã đổi mật khẩu tài khoản lớp.";
+
+  }else{
+
+    const {error}=await sb.auth.updateUser({
+      password:p1
+    });
+
+    if(error){
+      $("passwordMsg").textContent=
+        "Không đổi được mật khẩu: "+error.message;
+      return;
+    }
+
+    $("passwordMsg").textContent="✅ Đã đổi mật khẩu thành công.";
+  }
+
+  $("newPassword").value="";
+  $("newPassword2").value="";
+}
+ function weeks(sel){sel.innerHTML="";for(let i=1;i<=52;i++){let o=document.createElement("option");o.value=i;o.textContent="Tuần "+i;sel.appendChild(o)}sel.value=settings.current_week}
 async function getScores(){
  const {data,error}=await sb.from("competition_scores").select("*");if(error){alert(error.message);return []}return data||[]
 }
