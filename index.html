@@ -312,7 +312,15 @@ let sb, me=null, profile=null, settings=null;
 
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function isAdmin(){return profile?.role==="admin"}
+function formatDateVN(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return String(d.getDate()).padStart(2, "0") + "/" +
+         String(d.getMonth() + 1).padStart(2, "0") + "/" +
+         d.getFullYear();
+}
+ function isAdmin(){return profile?.role==="admin"}
 function allowedClasses(){return isAdmin()?CLASSES:[profile.class_name]}
 async function login(){
  if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT")){$("loginMsg").innerHTML='<div class="error">Bạn chưa cấu hình Supabase trong file config.js.</div>';return}
@@ -803,7 +811,7 @@ $("activitiesTable").innerHTML=
 (a||[]).map((x,i)=>
 `<tr>
   <td>${i+1}</td>
-  <td>${esc(x.ngay||"")}</td>
+  <td>${formatDateVN(x.ngay||"")}</td>
   <td><b>${esc(x.ten_hoat_dong||"")}</b></td>
   <td>${esc(x.doi_tuong||"")}</td>
   <td>${esc(x.ghi_chu||"")}</td>
