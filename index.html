@@ -1113,7 +1113,7 @@ function setupAttendanceStats(){
       .from("students")
       .select("*")
       .eq("lop", lop)
-      .order("ho_ten", { ascending: true });
+      .order("ma_hs", { ascending: true });
 
   if(studentError){
     alert("Không tải được danh sách học sinh:\n" + studentError.message);
