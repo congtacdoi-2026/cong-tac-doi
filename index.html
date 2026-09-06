@@ -36,6 +36,7 @@
   <button data-page="competition">⭐ Thi đua tuần</button>
   <button data-page="attendance">📋 Điểm danh</button>
   <button data-page="attendanceStats">📊 Thống kê điểm danh</button>
+  <button id="schoolAttendanceStatsNav" data-page="schoolAttendanceStats">🏫 Thống kê điểm danh toàn trường</button>
   <button data-page="activities">🎯 Hoạt động Đội</button>
   <button data-page="violations">🚨 Vi phạm</button>
   <button data-page="awards">🏆 Khen thưởng</button>
@@ -327,19 +328,31 @@ async function loadProfile(){
 }
 async function loadSettings(){const {data}=await sb.from("app_settings").select("*").eq("id",true).single();settings=data||{school_name:"LIÊN ĐỘI THCS LƯƠNG THẾ VINH",current_week:4,pt:10,pk:5,ptb:-15,py:-30}}
 function showApp(){
- $("login").classList.add("hidden");
- $("app").classList.remove("hidden");
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
 
- $("schoolNameDisplay").textContent =
-   settings?.school_name || "LIÊN ĐỘI THCS LƯƠNG THẾ VINH";
+  $("schoolNameDisplay").textContent =
+    settings?.school_name || "LIÊN ĐỘI THCS LƯƠNG THẾ VINH";
 
- $("sideRole").textContent =
-   isAdmin() ? "Tổng phụ trách" : "Tài khoản Chi đội " + profile.class_name;
+  $("sideRole").textContent =
+    isAdmin()
+      ? "Tổng phụ trách"
+      : "Tài khoản Chi đội " + profile.class_name;
 
- $("userInfo").textContent =
-   (profile.display_name || me.email) + " · " + (profile.class_name || "Toàn trường");
+  $("userInfo").textContent =
+    (profile.display_name || me.email) +
+    " · " +
+    (profile.class_name || "Toàn trường");
 
- loadPasswordUsers();
+  // CHỈ TỔNG PHỤ TRÁCH ĐƯỢC NHÌN THẤY
+  // mục Thống kê điểm danh toàn trường
+  const schoolStatsNav = $("schoolAttendanceStatsNav");
+
+  if(schoolStatsNav){
+    schoolStatsNav.style.display = isAdmin() ? "" : "none";
+  }
+
+  loadPasswordUsers();
 }
 async function loadPasswordUsers(){
   const box=$("adminPasswordBox");
@@ -1359,7 +1372,22 @@ function setupAttendanceStats(){
   table.querySelector("tbody").innerHTML = html;
 
 }
+ function setupSchoolAttendanceStats(){
+
+  const dateInput = $("attendanceSchoolDate");
+
+  if(!dateInput) return;
+
+  if(!dateInput.value){
+    dateInput.value = new Date().toISOString().slice(0,10);
+  }
+
+}
  async function loadSchoolAttendanceStats(){
+   if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách được xem thống kê điểm danh toàn trường.");
+    return;
+  }
 
   const dateInput = $("attendanceSchoolDate");
   const table = $("attendanceSchoolStatsTable");
@@ -1697,7 +1725,26 @@ $("settingsMsg").innerHTML =
 
 await refreshAll();}
 function fillSettings(){$("schoolName").value=settings.school_name;$("currentWeek").value=settings.current_week;$("pt").value=settings.pt;$("pk").value=settings.pk;$("ptb").value=settings.ptb;$("py").value=settings.py}
-async function refreshAll(){weeks($("weekSelect"));weeks($("dashWeek"));fillSettings();let cf=$("classFilter");cf.innerHTML='<option value="">Tất cả lớp</option>'+allowedClasses().map(c=>`<option>${c}</option>`).join("");await renderDashboard();await renderCompetition();await renderStudents();await renderOther();setupAttendance();setupAttendanceStats()}
+async function refreshAll(){
+  weeks($("weekSelect"));
+  weeks($("dashWeek"));
+  fillSettings();
+
+  let cf=$("classFilter");
+
+  cf.innerHTML =
+    '<option value="">Tất cả lớp</option>'+
+    allowedClasses().map(c=>`<option>${c}</option>`).join("");
+
+  await renderDashboard();
+  await renderCompetition();
+  await renderStudents();
+  await renderOther();
+
+  setupAttendance();
+  setupAttendanceStats();
+  setupSchoolAttendanceStats();
+}
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");$("pageTitle").textContent=b.textContent.replace(/^[^A-Za-zÀ-ỹ0-9]+/,"").trim()});
 $("weekSelect").onchange=renderCompetition;$("dashWeek").onchange=renderDashboard;$("studentSearch").oninput=renderStudents;$("classFilter").onchange=renderStudents;
 (async()=>{if(!window.SUPABASE_URL||window.SUPABASE_URL.includes("YOUR-PROJECT"))return;sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});const {data:{session}}=await sb.auth.getSession();if(session)await loadProfile();sb.auth.onAuthStateChange(async(_,s)=>{if(s)await loadProfile();else{$("app").classList.add("hidden");$("login").classList.remove("hidden")}})})();
