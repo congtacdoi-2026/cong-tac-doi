@@ -1550,8 +1550,9 @@ function setupAttendanceStats(){
   }
 
 }
- async function loadSchoolAttendanceStats(){
-   if(!isAdmin()){
+async function loadSchoolAttendanceStats(){
+
+  if(!isAdmin()){
     alert("Chỉ Tổng phụ trách được xem thống kê điểm danh toàn trường.");
     return;
   }
@@ -1569,8 +1570,36 @@ function setupAttendanceStats(){
     return;
   }
 
+  // ==============================
+  // TẠO Ô CHỌN BUỔI NẾU CHƯA CÓ
+  // ==============================
+
+  let sessionSelect = $("attendanceSchoolSession");
+
+  if(!sessionSelect){
+
+    sessionSelect = document.createElement("select");
+
+    sessionSelect.id = "attendanceSchoolSession";
+    sessionSelect.className = "select";
+
+    sessionSelect.innerHTML = `
+      <option value="sang">Buổi sáng</option>
+      <option value="chieu">Buổi chiều</option>
+    `;
+
+    dateInput.parentElement.appendChild(sessionSelect);
+  }
+
+  const buoi = sessionSelect.value;
+
+  const tenBuoi =
+    buoi === "sang"
+      ? "Buổi sáng"
+      : "Buổi chiều";
+
   notice.innerHTML =
-    `⏳ Đang tải thống kê điểm danh toàn trường ngày <b>${ngay}</b>...`;
+    `⏳ Đang tải thống kê điểm danh toàn trường ngày <b>${ngay}</b> - <b>${tenBuoi}</b>...`;
 
   // ==============================
   // 1. DANH SÁCH 12 LỚP
@@ -1592,14 +1621,15 @@ function setupAttendanceStats(){
   ];
 
   // ==============================
-  // 2. LẤY DỮ LIỆU ĐIỂM DANH TRONG NGÀY
+  // 2. LẤY ĐIỂM DANH ĐÚNG BUỔI
   // ==============================
 
   const { data: attendance, error } =
     await sb
       .from("attendance")
-      .select("student_id, lop, trang_thai, ngay")
-      .eq("ngay", ngay);
+      .select("student_id, lop, trang_thai, ngay, session")
+      .eq("ngay", ngay)
+      .eq("session", buoi);
 
   if(error){
 
@@ -1612,7 +1642,7 @@ function setupAttendanceStats(){
   }
 
   // ==============================
-  // 3. KHỞI TẠO THỐNG KÊ 12 LỚP
+  // 3. KHỞI TẠO THỐNG KÊ
   // ==============================
 
   const stats = {};
@@ -1629,7 +1659,7 @@ function setupAttendanceStats(){
   });
 
   // ==============================
-  // 4. TÍNH SỐ LƯỢNG
+  // 4. TÍNH THỐNG KÊ
   // ==============================
 
   (attendance || []).forEach(record => {
@@ -1660,7 +1690,7 @@ function setupAttendanceStats(){
   });
 
   // ==============================
-  // 5. TÍNH TỔNG TOÀN TRƯỜNG
+  // 5. TỔNG TOÀN TRƯỜNG
   // ==============================
 
   let totalCoMat = 0;
@@ -1712,7 +1742,7 @@ function setupAttendanceStats(){
   });
 
   // ==============================
-  // 7. DÒNG TỔNG TOÀN TRƯỜNG
+  // 7. TỔNG TOÀN TRƯỜNG
   // ==============================
 
   html += `
@@ -1742,19 +1772,21 @@ function setupAttendanceStats(){
   `;
 
   // ==============================
-  // 8. ĐƯA DỮ LIỆU VÀO BẢNG
+  // 8. ĐƯA VÀO BẢNG
   // ==============================
 
   const tbody = table.querySelector("tbody");
 
   if(tbody){
-
     tbody.innerHTML = html;
-
   }
 
+  // ==============================
+  // 9. THÔNG BÁO
+  // ==============================
+
   notice.innerHTML =
-    `✅ Đã thống kê điểm danh toàn trường ngày <b>${ngay}</b>.`;
+    `✅ Đã thống kê điểm danh toàn trường ngày <b>${ngay}</b> - <b>${tenBuoi}</b>.`;
 
 }
  async function addActivity(){
