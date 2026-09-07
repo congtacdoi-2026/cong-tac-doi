@@ -1210,7 +1210,10 @@ function setupAttendanceStats(){
     return;
   }
 
-  // Nếu có chọn ngày thì thống kê ngày đó
+  // ==============================
+  // XÁC ĐỊNH KHOẢNG NGÀY
+  // ==============================
+
   const isDaily = !!date;
 
   let startDate;
@@ -1223,7 +1226,6 @@ function setupAttendanceStats(){
 
   }else{
 
-    // Thống kê cả tháng
     startDate = month + "-01";
 
     const [year, mon] = month.split("-").map(Number);
@@ -1231,11 +1233,10 @@ function setupAttendanceStats(){
 
     endDate =
       month + "-" + String(lastDay).padStart(2,"0");
-
   }
 
   notice.innerHTML =
-    `⏳ Đang tải thống kê lớp <b>${lop}</b>...`;
+    `⏳ Đang tải thống kê lớp <b>${esc(lop)}</b>...`;
 
   // ==============================
   // 1. LẤY DANH SÁCH HỌC SINH
@@ -1249,10 +1250,12 @@ function setupAttendanceStats(){
       .order("ma_hs", { ascending: true });
 
   if(studentError){
+
     alert(
       "Không tải được danh sách học sinh:\n" +
       studentError.message
     );
+
     return;
   }
 
@@ -1263,21 +1266,23 @@ function setupAttendanceStats(){
   const { data: attendance, error: attendanceError } =
     await sb
       .from("attendance")
-      .select("student_id, ngay, trang_thai")
+      .select("student_id, ngay, buoi, trang_thai")
       .eq("lop", lop)
       .gte("ngay", startDate)
       .lte("ngay", endDate);
 
   if(attendanceError){
+
     alert(
       "Không tải được dữ liệu điểm danh:\n" +
       attendanceError.message
     );
+
     return;
   }
 
   // ==============================
-  // 3. TÍNH THỐNG KÊ
+  // 3. KHỞI TẠO THỐNG KÊ
   // ==============================
 
   const stats = {};
@@ -1285,7 +1290,17 @@ function setupAttendanceStats(){
   students.forEach(student => {
 
     stats[student.id] = {
+
       student: student,
+
+      sang_co_mat: 0,
+      sang_vang_phep: 0,
+      sang_vang_khong_phep: 0,
+
+      chieu_co_mat: 0,
+      chieu_vang_phep: 0,
+      chieu_vang_khong_phep: 0,
+
       co_mat: 0,
       vang_co_phep: 0,
       vang_khong_phep: 0,
@@ -1294,14 +1309,67 @@ function setupAttendanceStats(){
 
   });
 
+  // ==============================
+  // 4. TÍNH ĐIỂM DANH SÁNG / CHIỀU
+  // ==============================
+
   (attendance || []).forEach(record => {
 
     const item = stats[record.student_id];
 
     if(!item) return;
 
+    const buoi =
+      (record.buoi || "").trim().toLowerCase();
+
     const status =
       (record.trang_thai || "").trim();
+
+    // ------------------------------
+    // BUỔI SÁNG
+    // ------------------------------
+
+    if(buoi === "sang"){
+
+      if(status === "co_mat"){
+
+        item.sang_co_mat++;
+
+      }else if(status === "vang_phep"){
+
+        item.sang_vang_phep++;
+
+      }else if(status === "vang_khong_phep"){
+
+        item.sang_vang_khong_phep++;
+      }
+
+    }
+
+    // ------------------------------
+    // BUỔI CHIỀU
+    // ------------------------------
+
+    else if(buoi === "chieu"){
+
+      if(status === "co_mat"){
+
+        item.chieu_co_mat++;
+
+      }else if(status === "vang_phep"){
+
+        item.chieu_vang_phep++;
+
+      }else if(status === "vang_khong_phep"){
+
+        item.chieu_vang_khong_phep++;
+      }
+
+    }
+
+    // ------------------------------
+    // TỔNG HỢP
+    // ------------------------------
 
     if(status === "co_mat"){
 
@@ -1322,50 +1390,78 @@ function setupAttendanceStats(){
   });
 
   // ==============================
-  // 4. TỔNG HỢP NẾU XEM THEO NGÀY
+  // 5. THÔNG BÁO
   // ==============================
 
   if(isDaily){
 
-    let tongCoMat = 0;
-    let tongVangPhep = 0;
-    let tongVangKhongPhep = 0;
+    let tongSangCoMat = 0;
+    let tongSangVangPhep = 0;
+    let tongSangVangKhongPhep = 0;
+
+    let tongChieuCoMat = 0;
+    let tongChieuVangPhep = 0;
+    let tongChieuVangKhongPhep = 0;
 
     students.forEach(student => {
 
       const item = stats[student.id];
 
-      tongCoMat += item.co_mat;
-      tongVangPhep += item.vang_co_phep;
-      tongVangKhongPhep += item.vang_khong_phep;
+      tongSangCoMat += item.sang_co_mat;
+      tongSangVangPhep += item.sang_vang_phep;
+      tongSangVangKhongPhep += item.sang_vang_khong_phep;
+
+      tongChieuCoMat += item.chieu_co_mat;
+      tongChieuVangPhep += item.chieu_vang_phep;
+      tongChieuVangKhongPhep += item.chieu_vang_khong_phep;
 
     });
 
     notice.innerHTML = `
-      <b>📅 Thống kê điểm danh ngày ${date} - Lớp ${lop}</b>
+
+      <b>📅 Thống kê điểm danh ngày ${esc(date)} - Lớp ${esc(lop)}</b>
+
       <br><br>
-      <span style="margin-right:20px;">
-        ✅ Có mặt: <b>${tongCoMat}</b>
-      </span>
 
-      <span style="margin-right:20px;">
-        🟡 Vắng có phép: <b>${String(tongVangPhep).padStart(2,"0")}</b>
-      </span>
+      <b>🌅 BUỔI SÁNG</b>
+      <br>
+      ✅ Có mặt:
+      <b>${tongSangCoMat}</b>
+      &nbsp;&nbsp;&nbsp;
 
-      <span>
-        🔴 Vắng không phép: <b>${String(tongVangKhongPhep).padStart(2,"0")}</b>
-      </span>
+      🟡 Vắng có phép:
+      <b>${tongSangVangPhep}</b>
+      &nbsp;&nbsp;&nbsp;
+
+      🔴 Vắng không phép:
+      <b>${tongSangVangKhongPhep}</b>
+
+      <br><br>
+
+      <b>🌇 BUỔI CHIỀU</b>
+      <br>
+      ✅ Có mặt:
+      <b>${tongChieuCoMat}</b>
+      &nbsp;&nbsp;&nbsp;
+
+      🟡 Vắng có phép:
+      <b>${tongChieuVangPhep}</b>
+      &nbsp;&nbsp;&nbsp;
+
+      🔴 Vắng không phép:
+      <b>${tongChieuVangKhongPhep}</b>
+
     `;
 
   }else{
 
     notice.innerHTML =
-      `✅ Đã thống kê điểm danh lớp <b>${lop}</b> từ ngày <b>${startDate}</b> đến <b>${endDate}</b>.`;
+      `✅ Đã thống kê điểm danh lớp <b>${esc(lop)}</b> từ ngày <b>${esc(startDate)}</b> đến <b>${esc(endDate)}</b>.`;
 
   }
 
   // ==============================
-  // 5. HIỂN THỊ BẢNG
+  // 6. HIỂN THỊ BẢNG
   // ==============================
 
   let html = "";
@@ -1379,19 +1475,44 @@ function setupAttendanceStats(){
 
         <td>${index + 1}</td>
 
-        <td>${student.ma_hs || ""}</td>
+        <td>${esc(student.ma_hs || "")}</td>
 
         <td>
-          <b>${student.ho_ten || ""}</b>
+          <b>${esc(student.ho_ten || "")}</b>
         </td>
 
-        <td>${student.lop || lop}</td>
+        <td>${esc(student.lop || lop)}</td>
 
-        <td>${item.co_mat}</td>
+        <!-- SÁNG -->
+        <td>
+          ${item.sang_co_mat}
+        </td>
 
-        <td>${item.vang_co_phep}</td>
+        <td>
+          ${item.sang_vang_phep}
+        </td>
 
-        <td>${item.vang_khong_phep}</td>
+        <td>
+          ${item.sang_vang_khong_phep}
+        </td>
+
+        <!-- CHIỀU -->
+        <td>
+          ${item.chieu_co_mat}
+        </td>
+
+        <td>
+          ${item.chieu_vang_phep}
+        </td>
+
+        <td>
+          ${item.chieu_vang_khong_phep}
+        </td>
+
+        <!-- TỔNG -->
+        <td>
+          <b>${item.co_mat}</b>
+        </td>
 
         <td>
           <b>${item.tong_vang}</b>
@@ -1406,8 +1527,8 @@ function setupAttendanceStats(){
 
     html = `
       <tr>
-        <td colspan="8">
-          Không có học sinh trong lớp ${lop}.
+        <td colspan="12">
+          Không có học sinh trong lớp ${esc(lop)}.
         </td>
       </tr>
     `;
