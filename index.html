@@ -92,15 +92,15 @@
         Lớp:
         <select id="attendanceClass" class="select"></select>
       </label>
-
      <label>
-  Buổi:
-  <select id="attendanceSession" class="select">
-    <option value="sang">Buổi sáng</option>
-    <option value="chieu">Buổi chiều</option>
-  </select>
-</label> 
-     <button class="primary" onclick="loadAttendance()">
+    Buổi:
+    <select id="attendanceSession" class="select">
+        <option value="sang">Buổi sáng</option>
+        <option value="chieu">Buổi chiều</option>
+    </select>
+</label>
+
+    <button class="primary" onclick="loadAttendance()">
         🔄 Xem danh sách
       </button>
 
@@ -908,9 +908,10 @@ async function loadAttendance(){
 
   const ngay = $("attendanceDate").value;
   const lop = $("attendanceClass").value;
+  const buoi = $("attendanceSession").value;
 
-  if(!ngay || !lop){
-    alert("Vui lòng chọn ngày và lớp.");
+  if(!ngay || !lop || !buoi){
+    alert("Vui lòng chọn ngày, lớp và buổi.");
     return;
   }
 
@@ -924,7 +925,7 @@ async function loadAttendance(){
     .select("*")
     .eq("lop",lop)
     .order("ma_hs")
-.order("ho_ten");
+    .order("ho_ten");
 
   if(studentError){
     alert("Không tải được danh sách học sinh:\n"+studentError.message);
@@ -935,7 +936,8 @@ async function loadAttendance(){
     .from("attendance")
     .select("*")
     .eq("ngay",ngay)
-    .eq("lop",lop);
+    .eq("lop",lop)
+    .eq("buoi",buoi);
 
   if(attendanceError){
     alert("Không tải được dữ liệu điểm danh:\n"+attendanceError.message);
@@ -943,18 +945,24 @@ async function loadAttendance(){
   }
 
   const attendanceMap = {};
+
   (attendance||[]).forEach(a=>{
     attendanceMap[a.student_id] = a;
   });
 
   if(!students || !students.length){
+
     $("attendanceTable").innerHTML =
       "<tbody><tr><td colspan='6'>Lớp này chưa có học sinh.</td></tr></tbody>";
 
     $("attendanceNotice").textContent =
       "Không có học sinh trong lớp "+lop+".";
+
     return;
   }
+
+  const tenBuoi =
+    buoi === "sang" ? "Buổi sáng" : "Buổi chiều";
 
   let html =
     "<thead><tr>"+
@@ -976,8 +984,13 @@ async function loadAttendance(){
     html += `
       <tr>
         <td>${i+1}</td>
+
         <td>${esc(s.ma_hs||"")}</td>
-        <td><b>${esc(s.ho_ten||"")}</b></td>
+
+        <td>
+          <b>${esc(s.ho_ten||"")}</b>
+        </td>
+
         <td>${esc(s.lop||"")}</td>
 
         <td>
@@ -985,6 +998,7 @@ async function loadAttendance(){
             class="attendance-status"
             data-student-id="${s.id}"
           >
+
             <option value="co_mat" ${status==="co_mat"?"selected":""}>
               🟢 Có mặt
             </option>
@@ -996,6 +1010,7 @@ async function loadAttendance(){
             <option value="vang_khong_phep" ${status==="vang_khong_phep"?"selected":""}>
               🔴 Vắng không phép
             </option>
+
           </select>
         </td>
 
@@ -1007,6 +1022,7 @@ async function loadAttendance(){
             placeholder="Ghi chú..."
           >
         </td>
+
       </tr>
     `;
   });
@@ -1016,7 +1032,8 @@ async function loadAttendance(){
   $("attendanceTable").innerHTML = html;
 
   $("attendanceNotice").innerHTML =
-    "Đang điểm danh <b>"+lop+"</b> ngày <b>"+ngay+"</b>. "+
+    "Đang điểm danh <b>"+lop+"</b> ngày <b>"+ngay+
+    "</b> - <b>"+tenBuoi+"</b>. "+
     "Nếu đánh dấu nhầm, bạn có thể chọn lại trạng thái rồi lưu.";
 }
  async function saveAttendance(){
