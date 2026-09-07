@@ -1036,7 +1036,7 @@ async function loadAttendance(){
     "</b> - <b>"+tenBuoi+"</b>. "+
     "Nếu đánh dấu nhầm, bạn có thể chọn lại trạng thái rồi lưu.";
 }
- async function saveAttendance(){
+async function saveAttendance(){
 
   if(!profile){
     alert("Chưa đăng nhập.");
@@ -1045,9 +1045,10 @@ async function loadAttendance(){
 
   const ngay = $("attendanceDate").value;
   const lop = $("attendanceClass").value;
+  const buoi = $("attendanceSession").value;
 
-  if(!ngay || !lop){
-    alert("Vui lòng chọn ngày và lớp.");
+  if(!ngay || !lop || !buoi){
+    alert("Vui lòng chọn ngày, lớp và buổi.");
     return;
   }
 
@@ -1082,6 +1083,7 @@ async function loadAttendance(){
       .select("id")
       .eq("student_id",studentId)
       .eq("ngay",ngay)
+      .eq("buoi",buoi)
       .maybeSingle();
 
     if(findError){
@@ -1100,6 +1102,7 @@ async function loadAttendance(){
         .from("attendance")
         .update({
           lop:lop,
+          buoi:buoi,
           trang_thai:trangThai,
           ghi_chu:ghiChu,
           updated_at:new Date().toISOString()
@@ -1116,6 +1119,7 @@ async function loadAttendance(){
           student_id:studentId,
           ngay:ngay,
           lop:lop,
+          buoi:buoi,
           trang_thai:trangThai,
           ghi_chu:ghiChu
         });
@@ -1134,14 +1138,19 @@ async function loadAttendance(){
     saved++;
   }
 
+  const tenBuoi =
+    buoi === "sang" ? "Buổi sáng" : "Buổi chiều";
+
   alert(
     "✅ Đã lưu điểm danh "+saved+
     " học sinh lớp "+lop+
-    " ngày "+ngay+"."
+    " ngày "+ngay+
+    " - "+tenBuoi+"."
   );
 
   await loadAttendance();
 }
+
 function setupAttendanceStats(){
 
   const monthInput = $("attendanceStatsMonth");
