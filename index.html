@@ -93,7 +93,14 @@
         <select id="attendanceClass" class="select"></select>
       </label>
 
-      <button class="primary" onclick="loadAttendance()">
+     <label>
+  Buổi:
+  <select id="attendanceSession" class="select">
+    <option value="sang">Buổi sáng</option>
+    <option value="chieu">Buổi chiều</option>
+  </select>
+</label> 
+     <button class="primary" onclick="loadAttendance()">
         🔄 Xem danh sách
       </button>
 
