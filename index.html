@@ -198,17 +198,24 @@
 
     <h2>🏫 THỐNG KÊ ĐIỂM DANH TOÀN TRƯỜNG</h2>
 
-    <label>
-      Ngày:
-      <input id="attendanceSchoolDate" type="date">
-    </label>
+   <label>
+  Ngày:
+  <input id="attendanceSchoolDate" type="date">
+</label>
 
-    <button
-      class="primary"
-      onclick="loadSchoolAttendanceStats()">
-      🔎 Xem thống kê
-    </button>
+<label>
+  Buổi:
+  <select id="attendanceSchoolSession" class="select">
+    <option value="sang">Buổi sáng</option>
+    <option value="chieu">Buổi chiều</option>
+  </select>
+</label>
 
+<button
+  class="primary"
+  onclick="loadSchoolAttendanceStats()">
+  🔎 Xem thống kê
+</button>
   </div>
 
   <div
