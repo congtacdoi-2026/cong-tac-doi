@@ -1570,24 +1570,14 @@ async function loadSchoolAttendanceStats(){
   }
 
   // ==============================
-  // CHỌN BUỔI
+  // LẤY Ô CHỌN BUỔI
   // ==============================
 
-  let sessionSelect = $("attendanceSchoolSession");
+  const sessionSelect = $("attendanceSchoolSession");
 
   if(!sessionSelect){
-
-    sessionSelect = document.createElement("select");
-
-    sessionSelect.id = "attendanceSchoolSession";
-    sessionSelect.className = "select";
-
-    sessionSelect.innerHTML = `
-      <option value="sang">Buổi sáng</option>
-      <option value="chieu">Buổi chiều</option>
-    `;
-
-    dateInput.parentElement.appendChild(sessionSelect);
+    alert("Không tìm thấy ô chọn buổi.");
+    return;
   }
 
   const buoi = sessionSelect.value;
@@ -1620,8 +1610,7 @@ async function loadSchoolAttendanceStats(){
   ];
 
   // ==============================
-  // LẤY ĐIỂM DANH
-  // DÙNG ĐÚNG CỘT buoi
+  // LẤY ĐIỂM DANH ĐÚNG NGÀY + ĐÚNG BUỔI
   // ==============================
 
   const { data: attendance, error } =
@@ -1642,7 +1631,7 @@ async function loadSchoolAttendanceStats(){
   }
 
   // ==============================
-  // KHỞI TẠO
+  // KHỞI TẠO THỐNG KÊ
   // ==============================
 
   const stats = {};
@@ -1721,10 +1710,6 @@ async function loadSchoolAttendanceStats(){
         </td>
 
         <td>
-          ${tenBuoi}
-        </td>
-
-        <td>
           ${item.co_mat}
         </td>
 
@@ -1757,10 +1742,6 @@ async function loadSchoolAttendanceStats(){
       </td>
 
       <td>
-        <b>${tenBuoi}</b>
-      </td>
-
-      <td>
         <b>${totalCoMat}</b>
       </td>
 
@@ -1780,7 +1761,7 @@ async function loadSchoolAttendanceStats(){
   `;
 
   // ==============================
-  // HIỂN THỊ
+  // ĐƯA DỮ LIỆU VÀO BẢNG
   // ==============================
 
   const tbody = table.querySelector("tbody");
@@ -1788,6 +1769,10 @@ async function loadSchoolAttendanceStats(){
   if(tbody){
     tbody.innerHTML = html;
   }
+
+  // ==============================
+  // THÔNG BÁO
+  // ==============================
 
   notice.innerHTML =
     `✅ Đã thống kê điểm danh toàn trường ngày <b>${ngay}</b> - <b>${tenBuoi}</b>.`;
