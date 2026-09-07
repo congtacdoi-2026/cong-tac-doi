@@ -1061,7 +1061,6 @@ async function saveAttendance(){
   }
 
   const statusInputs = document.querySelectorAll(".attendance-status");
-  const noteInputs = document.querySelectorAll(".attendance-note");
 
   if(!statusInputs.length){
     alert("Chưa có danh sách học sinh để lưu.");
@@ -1081,18 +1080,17 @@ async function saveAttendance(){
 
     const ghiChu = noteInput ? noteInput.value.trim() : "";
 
-    // Kiểm tra điểm danh đã có của đúng HỌC SINH + NGÀY + BUỔI
     const {data:existing,error:findError} = await sb
-  .from("attendance")
-  .select("id")
-  .eq("student_id",studentId)
-  .eq("ngay",ngay)
-  .eq("session",session)
-  .maybeSingle();
+      .from("attendance")
+      .select("id")
+      .eq("student_id",studentId)
+      .eq("ngay",ngay)
+      .eq("buoi",buoi)
+      .maybeSingle();
 
     if(findError){
       alert(
-        "Không kiểm tra được điểm danh của học sinh:\n"+
+        "Không kiểm tra được điểm danh:\n"+
         findError.message
       );
       return;
@@ -1102,12 +1100,10 @@ async function saveAttendance(){
 
     if(existing){
 
-      // Nếu đã có thì cập nhật đúng buổi đó
       const result = await sb
         .from("attendance")
         .update({
           lop:lop,
-         session:session,
           buoi:buoi,
           trang_thai:trangThai,
           ghi_chu:ghiChu,
@@ -1119,17 +1115,16 @@ async function saveAttendance(){
 
     }else{
 
-      // Nếu chưa có thì tạo bản ghi mới
       const result = await sb
         .from("attendance")
         .insert({
-  student_id:studentId,
-  ngay:ngay,
-  lop:lop,
-  session:session,
-  trang_thai:trangThai,
-  ghi_chu:ghiChu
-});
+          student_id:studentId,
+          ngay:ngay,
+          lop:lop,
+          buoi:buoi,
+          trang_thai:trangThai,
+          ghi_chu:ghiChu
+        });
 
       error = result.error;
     }
@@ -1145,7 +1140,8 @@ async function saveAttendance(){
     saved++;
   }
 
-  const tenBuoi = buoi === "sang" ? "sáng" : "chiều";
+  const tenBuoi =
+    buoi === "sang" ? "sáng" : "chiều";
 
   alert(
     "✅ Đã lưu điểm danh "+saved+
@@ -1574,7 +1570,7 @@ async function loadSchoolAttendanceStats(){
   }
 
   // ==============================
-  // TẠO Ô CHỌN BUỔI NẾU CHƯA CÓ
+  // CHỌN BUỔI
   // ==============================
 
   let sessionSelect = $("attendanceSchoolSession");
@@ -1605,7 +1601,7 @@ async function loadSchoolAttendanceStats(){
     `⏳ Đang tải thống kê điểm danh toàn trường ngày <b>${ngay}</b> - <b>${tenBuoi}</b>...`;
 
   // ==============================
-  // 1. DANH SÁCH 12 LỚP
+  // DANH SÁCH 12 LỚP
   // ==============================
 
   const classes = [
@@ -1624,15 +1620,16 @@ async function loadSchoolAttendanceStats(){
   ];
 
   // ==============================
-  // 2. LẤY ĐIỂM DANH ĐÚNG BUỔI
+  // LẤY ĐIỂM DANH
+  // DÙNG ĐÚNG CỘT buoi
   // ==============================
 
   const { data: attendance, error } =
     await sb
       .from("attendance")
-      .select("student_id, lop, trang_thai, ngay, session")
+      .select("student_id, lop, trang_thai, ngay, buoi")
       .eq("ngay", ngay)
-      .eq("session", buoi);
+      .eq("buoi", buoi);
 
   if(error){
 
@@ -1645,7 +1642,7 @@ async function loadSchoolAttendanceStats(){
   }
 
   // ==============================
-  // 3. KHỞI TẠO THỐNG KÊ
+  // KHỞI TẠO
   // ==============================
 
   const stats = {};
@@ -1662,7 +1659,7 @@ async function loadSchoolAttendanceStats(){
   });
 
   // ==============================
-  // 4. TÍNH THỐNG KÊ
+  // TÍNH THỐNG KÊ
   // ==============================
 
   (attendance || []).forEach(record => {
@@ -1693,7 +1690,7 @@ async function loadSchoolAttendanceStats(){
   });
 
   // ==============================
-  // 5. TỔNG TOÀN TRƯỜNG
+  // TỔNG TOÀN TRƯỜNG
   // ==============================
 
   let totalCoMat = 0;
@@ -1704,7 +1701,7 @@ async function loadSchoolAttendanceStats(){
   let html = "";
 
   // ==============================
-  // 6. HIỂN THỊ 12 LỚP
+  // HIỂN THỊ 12 LỚP
   // ==============================
 
   classes.forEach(lop => {
@@ -1721,6 +1718,10 @@ async function loadSchoolAttendanceStats(){
 
         <td>
           <b>${lop}</b>
+        </td>
+
+        <td>
+          ${tenBuoi}
         </td>
 
         <td>
@@ -1745,7 +1746,7 @@ async function loadSchoolAttendanceStats(){
   });
 
   // ==============================
-  // 7. TỔNG TOÀN TRƯỜNG
+  // TỔNG TOÀN TRƯỜNG
   // ==============================
 
   html += `
@@ -1753,6 +1754,10 @@ async function loadSchoolAttendanceStats(){
 
       <td>
         <b>TOÀN TRƯỜNG</b>
+      </td>
+
+      <td>
+        <b>${tenBuoi}</b>
       </td>
 
       <td>
@@ -1775,7 +1780,7 @@ async function loadSchoolAttendanceStats(){
   `;
 
   // ==============================
-  // 8. ĐƯA VÀO BẢNG
+  // HIỂN THỊ
   // ==============================
 
   const tbody = table.querySelector("tbody");
@@ -1783,10 +1788,6 @@ async function loadSchoolAttendanceStats(){
   if(tbody){
     tbody.innerHTML = html;
   }
-
-  // ==============================
-  // 9. THÔNG BÁO
-  // ==============================
 
   notice.innerHTML =
     `✅ Đã thống kê điểm danh toàn trường ngày <b>${ngay}</b> - <b>${tenBuoi}</b>.`;
