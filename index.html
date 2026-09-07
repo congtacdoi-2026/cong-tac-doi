@@ -909,6 +909,8 @@ async function loadAttendance(){
 
   const ngay = $("attendanceDate").value;
   const lop = $("attendanceClass").value;
+ const sessionSelect = $("attendanceSession");
+const session = sessionSelect ? sessionSelect.value : "sang";
   const buoi = $("attendanceSession").value;
 
   if(!ngay || !lop || !buoi){
@@ -1081,12 +1083,12 @@ async function saveAttendance(){
 
     // Kiểm tra điểm danh đã có của đúng HỌC SINH + NGÀY + BUỔI
     const {data:existing,error:findError} = await sb
-      .from("attendance")
-      .select("id")
-      .eq("student_id",studentId)
-      .eq("ngay",ngay)
-      .eq("buoi",buoi)
-      .maybeSingle();
+  .from("attendance")
+  .select("id")
+  .eq("student_id",studentId)
+  .eq("ngay",ngay)
+  .eq("session",session)
+  .maybeSingle();
 
     if(findError){
       alert(
@@ -1105,6 +1107,7 @@ async function saveAttendance(){
         .from("attendance")
         .update({
           lop:lop,
+         session:session,
           buoi:buoi,
           trang_thai:trangThai,
           ghi_chu:ghiChu,
@@ -1120,13 +1123,13 @@ async function saveAttendance(){
       const result = await sb
         .from("attendance")
         .insert({
-          student_id:studentId,
-          ngay:ngay,
-          lop:lop,
-          buoi:buoi,
-          trang_thai:trangThai,
-          ghi_chu:ghiChu
-        });
+  student_id:studentId,
+  ngay:ngay,
+  lop:lop,
+  session:session,
+  trang_thai:trangThai,
+  ghi_chu:ghiChu
+});
 
       error = result.error;
     }
