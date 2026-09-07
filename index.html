@@ -1078,6 +1078,7 @@ async function saveAttendance(){
 
     const ghiChu = noteInput ? noteInput.value.trim() : "";
 
+    // Kiểm tra điểm danh đã có của đúng HỌC SINH + NGÀY + BUỔI
     const {data:existing,error:findError} = await sb
       .from("attendance")
       .select("id")
@@ -1098,6 +1099,7 @@ async function saveAttendance(){
 
     if(existing){
 
+      // Nếu đã có thì cập nhật đúng buổi đó
       const result = await sb
         .from("attendance")
         .update({
@@ -1113,6 +1115,7 @@ async function saveAttendance(){
 
     }else{
 
+      // Nếu chưa có thì tạo bản ghi mới
       const result = await sb
         .from("attendance")
         .insert({
@@ -1138,18 +1141,19 @@ async function saveAttendance(){
     saved++;
   }
 
-  const tenBuoi =
-    buoi === "sang" ? "Buổi sáng" : "Buổi chiều";
+  const tenBuoi = buoi === "sang" ? "sáng" : "chiều";
 
   alert(
     "✅ Đã lưu điểm danh "+saved+
     " học sinh lớp "+lop+
     " ngày "+ngay+
-    " - "+tenBuoi+"."
+    " - Buổi "+tenBuoi+"."
   );
 
   await loadAttendance();
 }
+
+
 
 function setupAttendanceStats(){
 
