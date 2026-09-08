@@ -32,8 +32,9 @@
  <div class="brand"><span id="schoolNameDisplay">LIÊN ĐỘI THCS LƯƠNG THẾ VINH</span><small id="sideRole"></small></div>
  <nav class="nav">
   <button class="active" data-page="dashboard">🏠 Tổng quan</button>
-  <button data-page="students">👨‍🎓 Học sinh</button>
-  <button data-page="competition">⭐ Thi đua tuần</button>
+<button data-page="students">👨‍🎓 Học sinh</button>
+<button data-page="studentStatistics">👥 Thống kê học sinh</button>
+<button data-page="competition">⭐ Thi đua tuần</button>
   <button data-page="attendance">📋 Điểm danh</button>
   <button data-page="attendanceStats">📊 Thống kê điểm danh</button>
   <button id="schoolAttendanceStatsNav" data-page="schoolAttendanceStats">🏫 Thống kê điểm danh toàn trường</button>
@@ -57,7 +58,33 @@
  <div class="section"><div class="toolbar"><h2>🏆 Xếp hạng thi đua</h2><select id="dashWeek" class="select"></select></div><div class="tablewrap"><table id="dashRank"></table></div></div>
 </section>
 
-<section id="students" class="page">
+<section id="studentStatistics" class="page">
+  <div class="section">
+    <div class="toolbar">
+      <h2>👥 THỐNG KÊ HỌC SINH TOÀN TRƯỜNG</h2>
+    </div>
+
+    <div class="tablewrap">
+      <table id="studentStatisticsTable">
+        <thead>
+          <tr>
+            <th>Lớp</th>
+            <th>Tổng số học sinh</th>
+            <th>Nữ</th>
+            <th>Dân tộc</th>
+            <th>Nữ dân tộc</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5">Đang tải dữ liệu...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+ <section id="students" class="page">
  <div class="section"><div class="toolbar"><h2>👨‍🎓 Học sinh</h2>
 <input id="studentSearch" placeholder="Tìm học sinh...">
 <select id="classFilter" class="select"></select>
