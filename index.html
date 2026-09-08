@@ -857,7 +857,7 @@ async function addStudent(){
   alert("✅ Đã thêm học sinh "+name.trim()+" vào lớp "+lop);
   await refreshAll();
 }
- async function importExcel(event){
+async function importExcel(event){
   const file = event.target.files[0];
   if(!file) return;
 
@@ -875,10 +875,10 @@ async function addStudent(){
 
     if(!rows.length){
       alert("File Excel không có dữ liệu.");
+      event.target.value = "";
       return;
     }
 
-    // Kiểm tra Excel có cột Dân tộc và Nơi ở hay không
     const hasDanToc = Object.prototype.hasOwnProperty.call(rows[0], "Dân tộc");
     const hasNoiO = Object.prototype.hasOwnProperty.call(rows[0], "Nơi ở");
 
@@ -886,19 +886,19 @@ async function addStudent(){
       ma_hs: String(r["Mã HS"] || "").trim(),
       ho_ten: String(r["Họ tên"] || "").trim(),
       lop: String(r["Lớp"] || "").trim(),
-      gioi_tinh: String(r["Giới tính"] || "").trim(),
       ngay_sinh: String(r["Ngày sinh"] || "").trim(),
+      gioi_tinh: String(r["Giới tính"] || "").trim(),
+      dan_toc: hasDanToc ? String(r["Dân tộc"] || "").trim() : "",
+      noi_o: hasNoiO ? String(r["Nơi ở"] || "").trim() : "",
       la_doi_vien:
         String(r["Đội viên"] || "").trim().toLowerCase() === "có" ||
         String(r["Đội viên"] || "").trim().toLowerCase() === "yes",
-      chuc_vu: String(r["Chức vụ"] || "").trim(),
-
-      dan_toc: hasDanToc ? String(r["Dân tộc"] || "").trim() : "",
-      noi_o: hasNoiO ? String(r["Nơi ở"] || "").trim() : ""
-    })).filter(s => s.ma_hs && s.ho_ten && s.lop);
+      chuc_vu: String(r["Chức vụ"] || "").trim()
+    })).filter(s => s.ho_ten && s.lop);
 
     if(!students.length){
-      alert("Không tìm thấy dữ liệu hợp lệ. Hãy kiểm tra tên các cột Excel.");
+      alert("Không tìm thấy dữ liệu học sinh hợp lệ.");
+      event.target.value = "";
       return;
     }
 
@@ -907,15 +907,19 @@ async function addStudent(){
 
     if(invalid.length){
       alert(
-        "Có lớp không nằm trong danh sách 12 chi đội:\n\n" +
+        "❌ Có lớp không nằm trong danh sách 12 chi đội:\n\n" +
         [...new Set(invalid.map(s => s.lop))].join(", ") +
         "\n\nHãy kiểm tra lại cột Lớp trong Excel."
       );
+      event.target.value = "";
       return;
     }
 
-    // Kiểm tra Mã HS bị trùng ngay trong file Excel
-    const maHS = students.map(s => s.ma_hs);
+    // Kiểm tra Mã HS bị trùng trong chính file Excel
+    const maHS = students
+      .map(s => s.ma_hs)
+      .filter(Boolean);
+
     const duplicateMaHS = [...new Set(
       maHS.filter((ma, i) => maHS.indexOf(ma) !== i)
     )];
@@ -924,122 +928,163 @@ async function addStudent(){
       alert(
         "❌ File Excel có Mã HS bị trùng:\n\n" +
         duplicateMaHS.join(", ") +
-        "\n\nHãy sửa lại Excel trước khi nhập."
+        "\n\nHãy sửa lại file Excel trước khi nhập."
       );
+      event.target.value = "";
       return;
     }
 
-    // Lấy danh sách học sinh hiện có
+    // Lấy toàn bộ học sinh hiện có
     const {data: existingStudents, error: fetchError} =
       await sb.from("students")
         .select("id, ma_hs");
 
     if(fetchError){
-      alert("Không đọc được danh sách học sinh hiện tại:\n" + fetchError.message);
+      alert(
+        "❌ Không đọc được danh sách học sinh hiện tại:\n" +
+        fetchError.message
+      );
+      event.target.value = "";
       return;
     }
 
     const existingMap = new Map(
-      (existingStudents || []).map(s => [String(s.ma_hs).trim(), s])
+      (existingStudents || [])
+        .filter(s => s.ma_hs)
+        .map(s => [String(s.ma_hs).trim(), s])
     );
 
     const updateList = [];
     const insertList = [];
 
-    students.forEach(s => {
-      const old = existingMap.get(s.ma_hs);
+    // Tạo Mã HS tự động cho trường hợp Excel không có Mã HS
+    let autoIndex = 1;
 
-      if(old){
-        // Học sinh đã có → cập nhật, giữ nguyên ID
+    function createNewMaHS(){
+      let ma;
+      do{
+        ma = "HS" + String(Date.now()).slice(-6) + String(autoIndex).padStart(2,"0");
+        autoIndex++;
+      }while(existingMap.has(ma) || students.some(s => s.ma_hs === ma));
+
+      return ma;
+    }
+
+    for(const s of students){
+
+      // Có Mã HS và Mã HS đã tồn tại
+      if(s.ma_hs && existingMap.has(s.ma_hs)){
+
+        const old = existingMap.get(s.ma_hs);
+
         const payload = {
           ho_ten: s.ho_ten,
           lop: s.lop,
-          gioi_tinh: s.gioi_tinh,
           ngay_sinh: s.ngay_sinh,
+          gioi_tinh: s.gioi_tinh,
           la_doi_vien: s.la_doi_vien,
           chuc_vu: s.chuc_vu
         };
 
-        // Chỉ cập nhật Dân tộc nếu Excel có dữ liệu
+        // Không ghi đè dữ liệu cũ bằng ô trống
         if(hasDanToc && s.dan_toc){
           payload.dan_toc = s.dan_toc;
         }
 
-        // Chỉ cập nhật Nơi ở nếu Excel có dữ liệu
         if(hasNoiO && s.noi_o){
           payload.noi_o = s.noi_o;
         }
 
         updateList.push({
           id: old.id,
-          payload
+          ma_hs: s.ma_hs,
+          ho_ten: s.ho_ten,
+          payload: payload
         });
 
       }else{
-        // Mã HS chưa có → thêm học sinh mới
+
+        // Mã HS mới hoặc không có Mã HS → thêm học sinh mới
+        const newMaHS = s.ma_hs || createNewMaHS();
+
         const payload = {
-          ma_hs: s.ma_hs,
+          ma_hs: newMaHS,
           ho_ten: s.ho_ten,
           lop: s.lop,
-          gioi_tinh: s.gioi_tinh,
           ngay_sinh: s.ngay_sinh,
+          gioi_tinh: s.gioi_tinh,
           la_doi_vien: s.la_doi_vien,
           chuc_vu: s.chuc_vu
         };
 
-        if(hasDanToc){
+        if(hasDanToc && s.dan_toc){
           payload.dan_toc = s.dan_toc;
         }
 
-        if(hasNoiO){
+        if(hasNoiO && s.noi_o){
           payload.noi_o = s.noi_o;
         }
 
         insertList.push(payload);
       }
-    });
+    }
 
     const ok = confirm(
-      "Tìm thấy " + students.length + " học sinh.\n\n" +
+      "📋 KẾT QUẢ KIỂM TRA FILE EXCEL\n\n" +
+      "Tổng số dòng hợp lệ: " + students.length + "\n\n" +
       "🔄 Cập nhật học sinh cũ: " + updateList.length + "\n" +
       "➕ Thêm học sinh mới: " + insertList.length + "\n\n" +
-      "Dữ liệu điểm danh cũ sẽ được giữ nguyên.\n\n" +
+      "🔒 Dữ liệu điểm danh cũ sẽ được giữ nguyên.\n" +
+      "Không xóa học sinh nào không có trong file Excel.\n\n" +
       "Bạn có muốn tiếp tục không?"
     );
 
-    if(!ok) return;
+    if(!ok){
+      event.target.value = "";
+      return;
+    }
 
-    // Cập nhật học sinh cũ
+    // CẬP NHẬT HỌC SINH CŨ
     for(const item of updateList){
-      const {error} = await sb.from("students")
+
+      const {error} = await sb
+        .from("students")
         .update(item.payload)
         .eq("id", item.id);
 
       if(error){
         alert(
-          "❌ Không cập nhật được học sinh có Mã HS tương ứng.\n\n" +
-          error.message
+          "❌ Không cập nhật được học sinh:\n" +
+          item.ma_hs + " - " + item.ho_ten +
+          "\n\n" + error.message
         );
+        event.target.value = "";
         return;
       }
     }
 
-    // Thêm học sinh mới
+    // THÊM HỌC SINH MỚI
     if(insertList.length){
-      const {error} = await sb.from("students")
+
+      const {error} = await sb
+        .from("students")
         .insert(insertList);
 
       if(error){
-        alert("❌ Không thêm được học sinh mới:\n" + error.message);
+        alert(
+          "❌ Không thêm được học sinh mới:\n\n" +
+          error.message
+        );
+        event.target.value = "";
         return;
       }
     }
 
     alert(
-      "✅ Cập nhật danh sách thành công!\n\n" +
+      "✅ NHẬP EXCEL THÀNH CÔNG!\n\n" +
       "🔄 Đã cập nhật: " + updateList.length + " học sinh\n" +
       "➕ Đã thêm mới: " + insertList.length + " học sinh\n\n" +
-      "📋 Dữ liệu điểm danh cũ vẫn được giữ nguyên."
+      "🔒 Dữ liệu điểm danh cũ vẫn được giữ nguyên."
     );
 
     event.target.value = "";
@@ -1047,7 +1092,10 @@ async function addStudent(){
 
   }catch(error){
     console.error(error);
-    alert("Không đọc được file Excel:\n" + error.message);
+    alert(
+      "❌ Không đọc được file Excel:\n\n" +
+      error.message
+    );
     event.target.value = "";
   }
 }
