@@ -874,56 +874,176 @@ async function addStudent(){
       return;
     }
 
-    const students = rows.map((r,index)=>({
-      ma_hs: String(r["Mã HS"]||"").trim(),
-      ho_ten: String(r["Họ tên"]||"").trim(),
-      lop: String(r["Lớp"]||"").trim(),
-      gioi_tinh: String(r["Giới tính"]||"").trim(),
-      ngay_sinh: String(r["Ngày sinh"]||"").trim(),
+    // Kiểm tra Excel có cột Dân tộc và Nơi ở hay không
+    const hasDanToc = Object.prototype.hasOwnProperty.call(rows[0], "Dân tộc");
+    const hasNoiO = Object.prototype.hasOwnProperty.call(rows[0], "Nơi ở");
+
+    const students = rows.map(r => ({
+      ma_hs: String(r["Mã HS"] || "").trim(),
+      ho_ten: String(r["Họ tên"] || "").trim(),
+      lop: String(r["Lớp"] || "").trim(),
+      gioi_tinh: String(r["Giới tính"] || "").trim(),
+      ngay_sinh: String(r["Ngày sinh"] || "").trim(),
       la_doi_vien:
-        String(r["Đội viên"]||"").trim().toLowerCase()==="có" ||
-        String(r["Đội viên"]||"").trim().toLowerCase()==="yes",
-      chuc_vu: String(r["Chức vụ"]||"").trim()
-    })).filter(s=>s.ho_ten && s.lop);
+        String(r["Đội viên"] || "").trim().toLowerCase() === "có" ||
+        String(r["Đội viên"] || "").trim().toLowerCase() === "yes",
+      chuc_vu: String(r["Chức vụ"] || "").trim(),
+
+      dan_toc: hasDanToc ? String(r["Dân tộc"] || "").trim() : "",
+      noi_o: hasNoiO ? String(r["Nơi ở"] || "").trim() : ""
+    })).filter(s => s.ma_hs && s.ho_ten && s.lop);
 
     if(!students.length){
       alert("Không tìm thấy dữ liệu hợp lệ. Hãy kiểm tra tên các cột Excel.");
       return;
     }
 
-    const invalid = students.filter(s=>!CLASSES.includes(s.lop));
+    // Kiểm tra lớp
+    const invalid = students.filter(s => !CLASSES.includes(s.lop));
 
     if(invalid.length){
       alert(
-        "Có lớp không nằm trong danh sách 12 chi đội:\n\n"+
-        [...new Set(invalid.map(s=>s.lop))].join(", ")+
+        "Có lớp không nằm trong danh sách 12 chi đội:\n\n" +
+        [...new Set(invalid.map(s => s.lop))].join(", ") +
         "\n\nHãy kiểm tra lại cột Lớp trong Excel."
       );
       return;
     }
 
+    // Kiểm tra Mã HS bị trùng ngay trong file Excel
+    const maHS = students.map(s => s.ma_hs);
+    const duplicateMaHS = [...new Set(
+      maHS.filter((ma, i) => maHS.indexOf(ma) !== i)
+    )];
+
+    if(duplicateMaHS.length){
+      alert(
+        "❌ File Excel có Mã HS bị trùng:\n\n" +
+        duplicateMaHS.join(", ") +
+        "\n\nHãy sửa lại Excel trước khi nhập."
+      );
+      return;
+    }
+
+    // Lấy danh sách học sinh hiện có
+    const {data: existingStudents, error: fetchError} =
+      await sb.from("students")
+        .select("id, ma_hs");
+
+    if(fetchError){
+      alert("Không đọc được danh sách học sinh hiện tại:\n" + fetchError.message);
+      return;
+    }
+
+    const existingMap = new Map(
+      (existingStudents || []).map(s => [String(s.ma_hs).trim(), s])
+    );
+
+    const updateList = [];
+    const insertList = [];
+
+    students.forEach(s => {
+      const old = existingMap.get(s.ma_hs);
+
+      if(old){
+        // Học sinh đã có → cập nhật, giữ nguyên ID
+        const payload = {
+          ho_ten: s.ho_ten,
+          lop: s.lop,
+          gioi_tinh: s.gioi_tinh,
+          ngay_sinh: s.ngay_sinh,
+          la_doi_vien: s.la_doi_vien,
+          chuc_vu: s.chuc_vu
+        };
+
+        // Chỉ cập nhật Dân tộc nếu Excel có dữ liệu
+        if(hasDanToc && s.dan_toc){
+          payload.dan_toc = s.dan_toc;
+        }
+
+        // Chỉ cập nhật Nơi ở nếu Excel có dữ liệu
+        if(hasNoiO && s.noi_o){
+          payload.noi_o = s.noi_o;
+        }
+
+        updateList.push({
+          id: old.id,
+          payload
+        });
+
+      }else{
+        // Mã HS chưa có → thêm học sinh mới
+        const payload = {
+          ma_hs: s.ma_hs,
+          ho_ten: s.ho_ten,
+          lop: s.lop,
+          gioi_tinh: s.gioi_tinh,
+          ngay_sinh: s.ngay_sinh,
+          la_doi_vien: s.la_doi_vien,
+          chuc_vu: s.chuc_vu
+        };
+
+        if(hasDanToc){
+          payload.dan_toc = s.dan_toc;
+        }
+
+        if(hasNoiO){
+          payload.noi_o = s.noi_o;
+        }
+
+        insertList.push(payload);
+      }
+    });
+
     const ok = confirm(
-      "Tìm thấy "+students.length+" học sinh.\n\n"+
-      "Bạn có muốn nhập vào hệ thống không?"
+      "Tìm thấy " + students.length + " học sinh.\n\n" +
+      "🔄 Cập nhật học sinh cũ: " + updateList.length + "\n" +
+      "➕ Thêm học sinh mới: " + insertList.length + "\n\n" +
+      "Dữ liệu điểm danh cũ sẽ được giữ nguyên.\n\n" +
+      "Bạn có muốn tiếp tục không?"
     );
 
     if(!ok) return;
 
-    const {error} = await sb.from("students").insert(students);
+    // Cập nhật học sinh cũ
+    for(const item of updateList){
+      const {error} = await sb.from("students")
+        .update(item.payload)
+        .eq("id", item.id);
 
-    if(error){
-      alert("Không nhập được danh sách:\n"+error.message);
-      return;
+      if(error){
+        alert(
+          "❌ Không cập nhật được học sinh có Mã HS tương ứng.\n\n" +
+          error.message
+        );
+        return;
+      }
     }
 
-    alert("✅ Đã nhập thành công "+students.length+" học sinh.");
+    // Thêm học sinh mới
+    if(insertList.length){
+      const {error} = await sb.from("students")
+        .insert(insertList);
+
+      if(error){
+        alert("❌ Không thêm được học sinh mới:\n" + error.message);
+        return;
+      }
+    }
+
+    alert(
+      "✅ Cập nhật danh sách thành công!\n\n" +
+      "🔄 Đã cập nhật: " + updateList.length + " học sinh\n" +
+      "➕ Đã thêm mới: " + insertList.length + " học sinh\n\n" +
+      "📋 Dữ liệu điểm danh cũ vẫn được giữ nguyên."
+    );
 
     event.target.value = "";
     await refreshAll();
 
   }catch(error){
     console.error(error);
-    alert("Không đọc được file Excel:\n"+error.message);
+    alert("Không đọc được file Excel:\n" + error.message);
     event.target.value = "";
   }
 }
