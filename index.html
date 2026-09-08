@@ -502,10 +502,121 @@ async function saveCompetition(){
  alert("Đã lưu điểm Tuần "+w);await refreshAll();
 }
 async function renderDashboard(){
- let scores=await getScores(),w=Number($("dashWeek").value),r=rankFor(scores,w);
- const {data:students}=await sb.from("students").select("id,la_doi_vien");
- $("mStudents").textContent=students?.length||0;$("mMembers").textContent=students?.filter(x=>x.la_doi_vien).length||0;$("mWeek").textContent=w;
- $("dashRank").innerHTML="<thead><tr><th>Hạng</th><th>Chi đội</th><th>Học tập</th><th>Nề nếp</th><th>Tổng</th></tr></thead><tbody>"+r.map(x=>`<tr><td>${x.rank<=3?['','🥇','🥈','🥉'][x.rank]:x.rank}</td><td><b>${x.c}</b></td><td>${x.ht}</td><td>${x.nd}</td><td class="total">${x.total}</td></tr>`).join("")+"</tbody>";
+  let scores=await getScores(),
+      w=Number($("dashWeek").value),
+      r=rankFor(scores,w);
+
+  const {data:students,error}=await sb
+    .from("students")
+    .select("*");
+
+  if(error){
+    console.error("Không tải được học sinh:",error);
+    return;
+  }
+
+  const allStudents=students||[];
+
+  $("mStudents").textContent=allStudents.length;
+  $("mMembers").textContent=allStudents.filter(x=>x.la_doi_vien).length;
+  $("mWeek").textContent=w;
+
+  $("dashRank").innerHTML=
+    "<thead><tr>"+
+    "<th>Hạng</th><th>Chi đội</th><th>Học tập</th><th>Nề nếp</th><th>Tổng</th>"+
+    "</tr></thead><tbody>"+
+    r.map(x=>`
+      <tr>
+        <td>${x.rank<=3?['','🥇','🥈','🥉'][x.rank]:x.rank}</td>
+        <td><b>${x.c}</b></td>
+        <td>${x.ht}</td>
+        <td>${x.nd}</td>
+        <td class="total">${x.total}</td>
+      </tr>
+    `).join("")+
+    "</tbody>";
+
+  const classes=[
+    "6B1","6B2","6B3",
+    "7B1","7B2","7B3",
+    "8B1","8B2","8B3",
+    "9B1","9B2","9B3"
+  ];
+
+  function isNu(s){
+    return String(s.gioi_tinh||"").trim().toLowerCase()==="nữ";
+  }
+
+  function isDanToc(s){
+    const dt=String(s.dan_toc||"").trim().toLowerCase();
+    return dt!=="" && dt!=="kinh";
+  }
+
+  function countClass(list){
+    return {
+      total:list.length,
+      nu:list.filter(isNu).length,
+      dt:list.filter(isDanToc).length,
+      nuDt:list.filter(s=>isNu(s)&&isDanToc(s)).length
+    };
+  }
+
+  function addRow(label,st,cls=""){
+    return `
+      <tr class="${cls}">
+        <td><b>${label}</b></td>
+        <td>${st.total}</td>
+        <td>${st.nu}</td>
+        <td>${st.dt}</td>
+        <td>${st.nuDt}</td>
+      </tr>
+    `;
+  }
+
+  let html=`
+    <div class="card" style="margin-top:16px">
+      <h3>📊 THỐNG KÊ HỌC SINH</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Lớp / Khối</th>
+              <th>Tổng HS</th>
+              <th>Nữ</th>
+              <th>Dân tộc</th>
+              <th>Nữ dân tộc</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  for(let k=6;k<=9;k++){
+    const gradeClasses=classes.filter(c=>c.startsWith(k+"B"));
+    const gradeStudents=allStudents.filter(s=>gradeClasses.includes(s.lop));
+
+    for(const c of gradeClasses){
+      const list=allStudents.filter(s=>s.lop===c);
+      html+=addRow(c,countClass(list));
+    }
+
+    html+=addRow(`KHỐI ${k}`,countClass(gradeStudents),"grade-total");
+  }
+
+  html+=addRow(
+    "TOÀN TRƯỜNG",
+    countClass(allStudents),
+    "school-total"
+  );
+
+  html+=`
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  const box=$("studentStatistics");
+  if(box) box.innerHTML=html;
 }
 async function renderStudents(){
  let q=($("studentSearch").value||"").toLowerCase(),
