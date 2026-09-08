@@ -675,6 +675,8 @@ async function renderStudents(){
  "<th>Lớp</th>"+
  "<th>Giới tính</th>"+
  "<th>Ngày sinh</th>"+
+ "<th>Dân tộc</th>"+
+ "<th>Nơi ở</th>"+
  "<th>Đội viên</th>"+
  "<th>Chức vụ</th>"+
  "<th>Thao tác</th>"+
@@ -688,6 +690,8 @@ async function renderStudents(){
    <td>${esc(s.lop)}</td>
    <td>${esc(s.gioi_tinh)}</td>
    <td>${esc(s.ngay_sinh)}</td>
+   <td>${esc(s.dan_toc||"")}</td>
+<td>${esc(s.noi_o||"")}</td>
    <td>${s.la_doi_vien?"✓":"-"}</td>
    <td>${esc(s.chuc_vu)}</td>
    <td>
