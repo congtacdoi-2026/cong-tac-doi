@@ -589,16 +589,16 @@ async function renderDashboard(){
   }
 
   function addRow(label,st,cls=""){
-    return `
-      <tr class="${cls}">
-        <td><b>${label}</b></td>
-        <td>${st.total}</td>
-        <td>${st.nu}</td>
-        <td>${st.dt}</td>
-        <td>${st.nuDt}</td>
-      </tr>
-    `;
-  }
+  return `
+    <tr class="${cls}" style="${cls ? 'font-weight:700;' : ''}">
+      <td><b>${label}</b></td>
+      <td>${st.total}</td>
+      <td>${st.nu}</td>
+      <td>${st.dt}</td>
+      <td>${st.nuDt}</td>
+    </tr>
+  `;
+}
 
   let html=`
     <div class="card" style="margin-top:16px">
