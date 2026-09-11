@@ -696,7 +696,7 @@ async function renderStudents(){
    <td>${esc(s.chuc_vu)}</td>
    <td>
      <button class="secondary" onclick="editStudent('${s.id}')">✏️ Sửa</button>
-     <button class="danger" onclick="deleteStudent('${s.id}','${esc(s.ho_ten)}')">🗑️ Xóa</button>
+     <button class="danger" onclick="deleteStudent(${JSON.stringify(s.id)}, ${JSON.stringify(s.ho_ten || "")})">🗑️ Xóa</button>
    </td>
  </tr>`
  ).join("")+
