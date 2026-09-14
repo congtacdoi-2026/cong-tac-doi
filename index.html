@@ -823,7 +823,10 @@ async function addStudent(){
 
   let ma=prompt("Mã học sinh:","");
 
-  let lop = prompt("Nhập lớp:\n6B1, 6B2, 6B3\n7B1, 7B2, 7B3\n8B1, 8B2, 8B3\n9B1, 9B2, 9B3", "6B1");
+  let lop=prompt(
+    "Nhập lớp:\n6B1, 6B2, 6B3\n7B1, 7B2, 7B3\n8B1, 8B2, 8B3\n9B1, 9B2, 9B3",
+    "6B1"
+  );
 
   if(!lop) return;
 
@@ -835,23 +838,35 @@ async function addStudent(){
   }
 
   let gt=prompt("Giới tính:","");
-let ns=prompt("Ngày sinh:","");
-let dt=prompt("Dân tộc:","");
-let no=prompt("Nơi ở:","");
-let dv=confirm("Học sinh này là ĐỘI VIÊN?\n\nOK = Có\nCancel = Không");
-let cv=prompt("Chức vụ trong Đội (nếu có):","");
+  if(gt===null) return;
+
+  let ns=prompt("Ngày sinh:","");
+  if(ns===null) return;
+
+  let dt=prompt("Dân tộc:","");
+  if(dt===null) return;
+
+  let no=prompt("Nơi ở:","");
+  if(no===null) return;
+
+  let dv=confirm(
+    "Học sinh này là ĐỘI VIÊN?\n\nOK = Có\nCancel = Không"
+  );
+
+  let cv=prompt("Chức vụ trong Đội (nếu có):","");
+  if(cv===null) return;
 
   const {error}=await sb.from("students").insert({
-  ma_hs:ma,
-  ho_ten:name.trim(),
-  lop:lop,
-  gioi_tinh:gt,
-  ngay_sinh:ns,
-  dan_toc:dt,
-  noi_o:no,
-  la_doi_vien:dv,
-  chuc_vu:cv
-});
+    ma_hs:ma.trim(),
+    ho_ten:name.trim(),
+    lop:lop,
+    gioi_tinh:gt.trim(),
+    ngay_sinh:ns.trim(),
+    dan_toc:dt.trim(),
+    noi_o:no.trim(),
+    la_doi_vien:dv,
+    chuc_vu:cv.trim()
+  });
 
   if(error){
     alert("Không lưu được học sinh:\n"+error.message);
