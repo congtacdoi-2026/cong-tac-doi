@@ -90,6 +90,7 @@
 <select id="classFilter" class="select"></select>
 <button class="primary" onclick="addStudent()">+ Thêm</button>
 <button class="secondary" onclick="document.getElementById('excelFile').click()">📥 Nhập Excel</button>
+  <button class="secondary" onclick="exportExcel()">📤 Xuất Excel</button>
 <input id="excelFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
  <div class="notice" id="studentNotice"></div><div class="tablewrap"><table id="studentsTable"></table></div></div>
 </section>
@@ -876,7 +877,62 @@ async function addStudent(){
   alert("✅ Đã thêm học sinh "+name.trim()+" vào lớp "+lop);
   await refreshAll();
 }
-async function importExcel(event){
+async function exportExcel(){
+
+  if(!isAdmin()){
+    alert("Chỉ Tổng phụ trách mới được xuất danh sách học sinh.");
+    return;
+  }
+
+  const {data,error}=await sb
+    .from("students")
+    .select("ma_hs,ho_ten,lop,ngay_sinh,gioi_tinh,dan_toc,noi_o,la_doi_vien,chuc_vu")
+    .order("lop")
+    .order("ma_hs")
+    .order("ho_ten");
+
+  if(error){
+    alert("❌ Không xuất được Excel:\n"+error.message);
+    return;
+  }
+
+  if(!data || !data.length){
+    alert("Chưa có học sinh để xuất.");
+    return;
+  }
+
+  const rows=data.map(s=>({
+    "Mã HS":s.ma_hs||"",
+    "Họ tên":s.ho_ten||"",
+    "Lớp":s.lop||"",
+    "Ngày sinh":s.ngay_sinh||"",
+    "Giới tính":s.gioi_tinh||"",
+    "Dân tộc":s.dan_toc||"",
+    "Nơi ở":s.noi_o||"",
+    "Đội viên":s.la_doi_vien ? "Có" : "Không",
+    "Chức vụ":s.chuc_vu||""
+  }));
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+
+  ws["!cols"]=[
+    {wch:14},
+    {wch:28},
+    {wch:10},
+    {wch:15},
+    {wch:12},
+    {wch:15},
+    {wch:35},
+    {wch:12},
+    {wch:20}
+  ];
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Danh sách học sinh");
+
+  XLSX.writeFile(wb,"Danh_sach_hoc_sinh.xlsx");
+}
+ async function importExcel(event){
   const file = event.target.files[0];
   if(!file) return;
 
