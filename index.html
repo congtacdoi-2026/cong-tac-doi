@@ -835,19 +835,23 @@ async function addStudent(){
   }
 
   let gt=prompt("Giới tính:","");
-  let ns=prompt("Ngày sinh:","");
-  let dv=confirm("Học sinh này là ĐỘI VIÊN?\n\nOK = Có\nCancel = Không");
-  let cv=prompt("Chức vụ trong Đội (nếu có):","");
+let ns=prompt("Ngày sinh:","");
+let dt=prompt("Dân tộc:","");
+let no=prompt("Nơi ở:","");
+let dv=confirm("Học sinh này là ĐỘI VIÊN?\n\nOK = Có\nCancel = Không");
+let cv=prompt("Chức vụ trong Đội (nếu có):","");
 
   const {error}=await sb.from("students").insert({
-    ma_hs:ma,
-    ho_ten:name.trim(),
-    lop:lop,
-    gioi_tinh:gt,
-    ngay_sinh:ns,
-    la_doi_vien:dv,
-    chuc_vu:cv
-  });
+  ma_hs:ma,
+  ho_ten:name.trim(),
+  lop:lop,
+  gioi_tinh:gt,
+  ngay_sinh:ns,
+  dan_toc:dt,
+  noi_o:no,
+  la_doi_vien:dv,
+  chuc_vu:cv
+});
 
   if(error){
     alert("Không lưu được học sinh:\n"+error.message);
