@@ -1140,9 +1140,29 @@ if(hasNoiO){
     // THÊM HỌC SINH MỚI
     if(insertList.length){
 
-      const {error} = await sb
-        .from("students")
-        .insert(insertList);
+      const {data: insertedStudents, error} = await sb
+  .from("students")
+  .insert(insertList)
+  .select("id,ma_hs,ho_ten,lop");
+
+if(error){
+  alert(
+    "❌ Không thêm được học sinh mới:\n\n" +
+    error.message
+  );
+  event.target.value = "";
+  return;
+}
+
+if(!insertedStudents || insertedStudents.length !== insertList.length){
+  alert(
+    "❌ Hệ thống không xác nhận được việc thêm học sinh.\n\n" +
+    "Dự kiến thêm: " + insertList.length + "\n" +
+    "Thực tế ghi nhận: " + (insertedStudents ? insertedStudents.length : 0)
+  );
+  event.target.value = "";
+  return;
+}
 
       if(error){
         alert(
