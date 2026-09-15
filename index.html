@@ -1061,15 +1061,14 @@ async function exportExcel(){
           chuc_vu: s.chuc_vu
         };
 
-        // Không ghi đè dữ liệu cũ bằng ô trống
-        if(hasDanToc && s.dan_toc){
-          payload.dan_toc = s.dan_toc;
-        }
+        // Cập nhật Dân tộc và Nơi ở từ Excel
+if(hasDanToc){
+  payload.dan_toc = s.dan_toc;
+}
 
-        if(hasNoiO && s.noi_o){
-          payload.noi_o = s.noi_o;
-        }
-
+if(hasNoiO){
+  payload.noi_o = s.noi_o;
+}
         updateList.push({
           id: old.id,
           ma_hs: s.ma_hs,
