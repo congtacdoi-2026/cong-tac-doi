@@ -1475,90 +1475,89 @@ async function saveAttendance(){
     return;
   }
 
-  let saved = 0;
+  const saveBtn = document.querySelector(
+    'button[onclick="saveAttendance()"]'
+  );
 
-  for(const input of statusInputs){
+  if(saveBtn){
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = "⏳ Đang lưu...";
+  }
 
-    const studentId = input.dataset.studentId;
-    const trangThai = input.value;
+  try{
 
-    const noteInput = document.querySelector(
-      `.attendance-note[data-student-id="${studentId}"]`
-    );
+    const rows = [];
 
-    const ghiChu = noteInput ? noteInput.value.trim() : "";
+    for(const input of statusInputs){
 
-    const {data:existing,error:findError} = await sb
-      .from("attendance")
-      .select("id")
-      .eq("student_id",studentId)
-      .eq("ngay",ngay)
-      .eq("buoi",buoi)
-      .maybeSingle();
+      const studentId = input.dataset.studentId;
+      const trangThai = input.value;
 
-    if(findError){
-      alert(
-        "Không kiểm tra được điểm danh:\n"+
-        findError.message
+      const noteInput = document.querySelector(
+        `.attendance-note[data-student-id="${studentId}"]`
       );
-      return;
+
+      const ghiChu = noteInput
+        ? noteInput.value.trim()
+        : "";
+
+      rows.push({
+        student_id: studentId,
+        ngay: ngay,
+        lop: lop,
+        buoi: buoi,
+        trang_thai: trangThai,
+        ghi_chu: ghiChu,
+        updated_at: new Date().toISOString()
+      });
     }
 
-    let error;
-
-    if(existing){
-
-      const result = await sb
-        .from("attendance")
-        .update({
-          lop:lop,
-          buoi:buoi,
-          trang_thai:trangThai,
-          ghi_chu:ghiChu,
-          updated_at:new Date().toISOString()
-        })
-        .eq("id",existing.id);
-
-      error = result.error;
-
-    }else{
-
-      const result = await sb
-        .from("attendance")
-        .insert({
-          student_id:studentId,
-          ngay:ngay,
-          lop:lop,
-          buoi:buoi,
-          trang_thai:trangThai,
-          ghi_chu:ghiChu
-        });
-
-      error = result.error;
-    }
+    // LƯU CẢ LỚP TRONG 1 LẦN
+    const {error} = await sb
+      .from("attendance")
+      .upsert(
+        rows,
+        {
+          onConflict: "student_id,ngay,buoi"
+        }
+      );
 
     if(error){
       alert(
-        "❌ Không lưu được điểm danh:\n"+
+        "❌ Không lưu được điểm danh:\n\n"+
         error.message
       );
+      console.error("Lỗi lưu điểm danh:",error);
       return;
     }
 
-    saved++;
+    const tenBuoi =
+      buoi === "sang" ? "sáng" : "chiều";
+
+    alert(
+      "✅ Đã lưu điểm danh "+rows.length+
+      " học sinh lớp "+lop+
+      " ngày "+ngay+
+      " - Buổi "+tenBuoi+"."
+    );
+
+  }catch(error){
+
+    console.error("Lỗi saveAttendance:",error);
+
+    alert(
+      "❌ Có lỗi khi lưu điểm danh:\n\n"+
+      error.message
+    );
+
+  }finally{
+
+    if(saveBtn){
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = "💾 Lưu điểm danh";
+    }
+
   }
-
-  const tenBuoi =
-    buoi === "sang" ? "sáng" : "chiều";
-
-  alert(
-    "✅ Đã lưu điểm danh "+saved+
-    " học sinh lớp "+lop+
-    " ngày "+ngay+
-    " - Buổi "+tenBuoi+"."
-  );
-
-  await loadAttendance();
 }
 
 
