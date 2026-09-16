@@ -429,6 +429,7 @@ async function loadPasswordUsers(){
 
   $("passwordUser").innerHTML=
     '<option value="">-- Chọn tài khoản lớp --</option>'+
+   '<option value="__SELF__">👤 Tài khoản Tổng phụ trách</option>'+
     users.map(x=>
       `<option value="${x.id}">
         ${esc(x.class_name||x.display_name||"Tài khoản")}
@@ -454,13 +455,32 @@ async function loadPasswordUsers(){
 
   if(isAdmin()){
 
-    const userId=$("passwordUser").value;
+  const userId=$("passwordUser").value;
 
-    if(!userId){
-      $("passwordMsg").textContent="Hãy chọn tài khoản lớp.";
+  if(!userId){
+    $("passwordMsg").textContent="Hãy chọn tài khoản.";
+    return;
+  }
+
+  // Đổi mật khẩu chính tài khoản Tổng phụ trách
+  if(userId==="__SELF__"){
+
+    const {error}=await sb.auth.updateUser({
+      password:p1
+    });
+
+    if(error){
+      $("passwordMsg").textContent=
+        "Không đổi được mật khẩu: "+error.message;
       return;
     }
 
+    $("passwordMsg").textContent=
+      "✅ Đã đổi mật khẩu tài khoản Tổng phụ trách.";
+
+  }else{
+
+    // Đổi mật khẩu tài khoản lớp
     const {data,error}=await sb.functions.invoke(
       "admin-change-password",
       {
@@ -477,10 +497,11 @@ async function loadPasswordUsers(){
       return;
     }
 
-    $("passwordMsg").textContent="✅ Đã đổi mật khẩu tài khoản lớp.";
+    $("passwordMsg").textContent=
+      "✅ Đã đổi mật khẩu tài khoản lớp.";
+  }
 
-  }else{
-
+}else{
     const {error}=await sb.auth.updateUser({
       password:p1
     });
