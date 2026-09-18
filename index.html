@@ -196,14 +196,26 @@
       <table id="attendanceStatsTable">
         <thead>
   <tr>
-    <th>STT</th>
-    <th>Mã HS</th>
-    <th>Họ tên</th>
-    <th>Lớp</th>
-    <th>Buổi</th>
+    <th rowspan="2">STT</th>
+    <th rowspan="2">Mã HS</th>
+    <th rowspan="2">Họ tên</th>
+    <th rowspan="2">Lớp</th>
+    <th colspan="3">🌅 BUỔI SÁNG</th>
+    <th colspan="3">🌇 BUỔI CHIỀU</th>
+    <th colspan="4">📊 TỔNG CỘNG</th>
+  </tr>
+  <tr>
     <th>Có mặt</th>
-    <th>Vắng có phép</th>
-    <th>Vắng không phép</th>
+    <th>Vắng phép</th>
+    <th>Vắng KP</th>
+
+    <th>Có mặt</th>
+    <th>Vắng phép</th>
+    <th>Vắng KP</th>
+
+    <th>Có mặt</th>
+    <th>Vắng phép</th>
+    <th>Vắng KP</th>
     <th>Tổng vắng</th>
   </tr>
 </thead>
@@ -1938,13 +1950,21 @@ function setupAttendanceStats(){
         </td>
 
         <!-- TỔNG -->
-        <td>
-          <b>${item.co_mat}</b>
-        </td>
+<td>
+  <b>${item.co_mat}</b>
+</td>
 
-        <td>
-          <b>${item.tong_vang}</b>
-        </td>
+<td>
+  <b>${item.vang_co_phep}</b>
+</td>
+
+<td>
+  <b>${item.vang_khong_phep}</b>
+</td>
+
+<td>
+  <b>${item.tong_vang}</b>
+</td>
 
       </tr>
     `;
@@ -1955,7 +1975,7 @@ function setupAttendanceStats(){
 
     html = `
       <tr>
-        <td colspan="12">
+        <td colspan="14">
           Không có học sinh trong lớp ${esc(lop)}.
         </td>
       </tr>
